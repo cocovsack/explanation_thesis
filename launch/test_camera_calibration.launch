@@ -1,0 +1,15 @@
+<launch>
+
+    <param name="is_simulator" type="bool" value="false" />
+    <param name="perception_method" type="str" value="pointcloud" /> <!-- can be "aruco" of "pointcloud" -->
+        
+    <include file="$(find chefbot)/config/ur_config.xml" />
+
+    <include file="$(find tri_star)/launch/single_azure_driver.launch" />
+    <include file="$(find tri_star)/launch/aruco_kinect_calibration_perception.launch" />
+
+
+    <node pkg="chefbot" name="test_camera_calibration" type="test_camera_calibration.py" output="screen" respawn="true"/>
+
+
+</launch>

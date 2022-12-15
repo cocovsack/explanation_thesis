@@ -1,0 +1,79 @@
+* chef-bot
+A repository for the chef-bot project
+
+
+* Msgs 
+ - =/chefbot/speech2text_sync= publishes the processed speech commands received from s2t
+* Srvs
+ - =/chefbot/pause_sync_detection_srv= pauses are unpauses the s2t node so that its not always listening.
+
+* Dependencies
+ - SWI-Prolog for reasoning.
+
+* Troubleshooting
+
+** Problem: The host computer is sucessfully connected to the robot, but the robot will not move to desired location.
+
+Try manually moving each point to the default position using the tablet:
+- On the tablet, first change the mode to "manual"
+- Select the "Move" tab and the joints to the following values:
+  - =Base: 0=
+  - =Shoulder: -120=
+  - =Elbow: -60=
+  - =Wrist 1: 120=
+  - =Wrist 2: -90=
+  - =Wrist 3: 0=
+    
+
+* Tests
+In order to test the camera calibration first launch the robot driver using =roslaunch control_wrapper ur5e_cam_2f85_control.launch=
+and then launch =roslaunch chefbot test_camera_calibration.launch=
+
+
+* Notes
+  - In order to get the C code for the fastforward planner (./chef-bot/ppdlgym_planners/FF-v2.3) I had to make the following changes to the source code:
+    - in the file lex-fct_pddl.l I changed the variable name  =gbracket_count= -->  =gbracket_count_2=
+      - NOTE: The name here was totally arbitrary. The compiler did not like that two .c files declare a global variable with the same name, though I dont think these variables need to have the same name necessarily.
+    - In relax.c I changed =State lcurrent_goal= --> =extern State lcurrent_goals=
+      - Reference: https://www.linuxquestions.org/questions/programming-9/multiple-definition-errors-when-linking-on-arch-using-gcc-10-1-0-a-4175675444/
+
+
+* Item perception
+Terminal commands for testing:
+  1. Launch ROS
+    $ roscore
+  2. Camera launch
+    $ roslaunch chefbot azure_ws_perception.launch
+  3. UR driver
+    $ roslaunch control_wrapper ur5e_cam_2f85_control.launch
+  4. Nodes for getting transformed point
+    a. Item perception: get grasp point
+      $ rosrun chefbot item_perception.py
+    b. Get depth for pixel
+      $ rosrun chefbot get_depth_for_pixel.py
+    c. Transform
+      $ rosrun chefbot pixel_and_depth_to_robot_pose.py
+      $ rosrun chefbot transform.py 
+  5. Service call:
+    $ rosservice call /chefbot/learning/item_request [then press tab so you can fill in]
+    Current example: 'plate1' = dark pink plate
+  6. Nodes if want robot to pick up object:
+    $ rosrun chefbot pick_and_place.py
+    $ rosrun chefbot perception_pick_place.py [subscribe to /chefbot/perception/transformed_grasp_point instead of /chefbot/test/aruco_object_position]
+
+
+To run aruco:
+  $ roslaunch chefbot test_camera_calibration.launch
+  $ rosrun chefbot pick_and_place.py
+  $ rosrun chefbot perception_pick_place.py
+  $ rosrun chefbot test_camera_calibration.py
+
+
+* Complete Pipeline
+
+1. Launch roscore =roscore=
+2. Launch robot drivers =roslaunch control_wrapper ur5e_cam_2f85_control.launch=
+3. Launch kinect drivers =roslaunch chefbot azure_ws_perception.launch=
+4. Launch all chefbot perception nodes =roslaunch chefbot perception.launch=
+5. Run reasoning and feedback nodes =roslaunch chefbot reason_feedback.launch=
+6. Launch all chefbot manipulation nodes =roslaunch chefbot manipulation.launch mover_robot:=false=

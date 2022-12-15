@@ -1,0 +1,24 @@
+<launch>
+
+  
+<!-- Item Perception -->
+    <node name="item_perception" pkg="chefbot" type="item_perception.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Get Depth for Pixel -->
+    <node name="get_depth_for_pixel" pkg="chefbot" type="get_depth_for_pixel.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Transform -->
+    <node name="transform" pkg="chefbot" type="transform.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Pixel and Depth to Robot Pose -->
+    <node name="pixel_and_depth_to_robot_pose" pkg="chefbot" type="pixel_and_depth_to_robot_pose.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Perception Wrapper -->
+    <node name="perception_wrapper" pkg="chefbot" type="perception_wrapper.py" respawn="true" output="screen"/>
+<!-- -->
+
+</launch>

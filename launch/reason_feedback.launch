@@ -1,0 +1,25 @@
+<launch>
+
+    <arg name="run_name" default="jake_run_1" />
+
+    <param name="chefbot/learning/run_name" value="$(arg run_name)" />
+<!-- Speech2Text -->
+    <node name="s2t" pkg="chefbot" type="s2t.py" respawn="true"/>
+<!-- -->
+
+<!-- Process Feedback -->
+    <node name="process_feedback" pkg="chefbot" type="process_feedback.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Reasoner -->
+    <node name="reasoner" pkg="chefbot" type="reasoner.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Prolog interface -->
+    <include file="$(find rosprolog)/launch/rosprolog.launch" >
+    </include>
+
+    <node name="prolog_interface" pkg="chefbot" type="prolog_interface.py" respawn="true" output="screen"/>
+<!-- -->
+
+</launch>

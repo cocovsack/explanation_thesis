@@ -1,0 +1,18 @@
+<launch>
+     <rosparam param = "storage_cam_matrix">[-0.8124765700940955, -0.3439553291808597, 0.47071918866370915, -0.8146390040778329, -0.5828474019304215, 0.4611291691495921, -0.6690656136899911, 0.6712445228187213, 0.013066335029068463, -0.817957591130184, -0.5751301157141878, 0.5244515691344991, 0.0, 0.0, 0.0, 1.0]</rosparam>
+    <rosparam param = "workspace_cam_matrix">[-0.08750836445666606, -0.9960946289977985, -0.01173781205575175, -0.33490360917941986, -0.9961426640035954, 0.08757716308957976, -0.005480278916361513, -0.025361254610593603, 0.006486840674719038, 0.011212965126053243, -0.9999160916352645, 0.8689006641118059, 0.0, 0.0, 0.0, 1.0]</rosparam>
+
+
+    <rosparam param = "workspace_min_boundary"> [-.90, -.60, -0.05] </rosparam>
+    <rosparam param = "workspace_max_boundary"> [-0.13, .60, 1.0] </rosparam>
+
+    <rosparam param = "joint_names"> ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"] </rosparam>
+
+    <rosparam param = "scan_tool_perception_workspace_min_boundary"> [-0.62933734, -0.36317617,  0.4744942] </rosparam>
+    <rosparam param = "scan_tool_perception_workspace_max_boundary"> [-0.02933734,  0.23682383,  1.0744942] </rosparam>
+
+    <rosparam param = "scan_tool_robot_boundary"> .69 </rosparam>
+
+    <rosparam param="robot_platform_type"> "ur" </rosparam>
+    <rosparam param="robot_platform_side"> "left" </rosparam>
+</launch>

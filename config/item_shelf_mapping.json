@@ -1,0 +1,92 @@
+{
+"salt": 
+        {
+        "row": 1,
+        "column": 1
+        },
+"milk":
+        {
+        "row": 1,
+        "column": 2
+        },
+"oats":
+        {
+        "row": 1,
+        "column": 3
+        },
+"measuringcup":
+        {
+        "row": 2,
+        "column": 1
+        },
+"cocopuffs":
+   {
+        "row": 2,
+        "column": 2
+        },
+"blueberry":
+        {
+        "row": 2,
+        "column": 3
+        },
+"roll":
+        {
+        "row": 3,
+        "column": 1
+        },
+"peanutbutter":
+        {
+        "row": 3,
+        "column": 2
+        },
+"jellypastry":
+        {
+        "row": 3,
+        "column": 3
+        },
+"pie":
+        {
+        "row": 4,
+        "column": 1
+        },
+"strawberry":
+        {
+        "row": 4,
+        "column": 2
+        },
+"muffin":
+        {
+        "row": 4,
+        "column": 3
+        },
+"banana":
+        {
+        "row": 5,
+        "column": 1
+        },
+"chocolatechips":
+        {
+        "row": 5,
+        "column": 2
+        },
+"egg":
+        {
+        "row": 5,
+        "column": 3
+        },
+"mixingspoon":
+        {
+        "row": 6,
+        "column": 1
+       }, 
+"eatingspoon":
+       {
+       "row": 6,
+       "column": 2
+      }, 
+"bowl":
+       {
+       "row": 6,
+       "column": 3
+      }
+}

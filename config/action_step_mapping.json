@@ -1,0 +1,164 @@
+{
+	"pour_water_into_measuring_cup": {
+		"Steps": ["Grasp measuring cup and bring it to center of workspace",
+			"Place measuring cup under sink",
+			"Press button"
+		],
+		"Manipulation": ["IK",
+			"FK",
+			"FK"
+		]
+
+	},
+
+	"pour_water_from_measuring_cup_into_pan": {
+		"Steps": ["Grasp measuring cup by handle",
+			"Bring measuring cup to pan",
+			"Pour water into pan",
+			"Place measuring cup back at sink"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"pour_into_pan": {
+		"Steps": ["Grasp ingredient in the workspace",
+			"Pour into pan",
+			"Place container down"
+		],
+		"Manipulation": ["IK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"pour_into_bowl": {
+		"Steps": ["Grasp ingredient in the workspace",
+			"Pour into bowl",
+			"Place container down"
+		],
+		"Manipulation": ["IK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"putin_microwave": {
+		"Steps": ["Open microwave door",
+			"Pick up ingredient in workspace",
+			"Put ingredient in microwave 2",
+			"Close microwave door"
+		],
+		"Manipulation": ["FK",
+			"IK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"collect_water": {
+		"Steps": ["Close gripper",
+			"Press sink button"
+		],
+		"Manipulation": ["FK",
+			"FK"
+		]
+	},
+
+	"turnon_microwave": {
+		"Steps": ["Close gripper",
+			"Press microwave button"
+		],
+		"Manipulation": ["FK",
+			"FK"
+		]
+	},
+
+	"take_out_of_microwave": {
+		"Steps": ["Open microwave door",
+			"Remove ingredient from microwave 2",
+			"Close microwave door"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"turnon_stove": {
+		"Steps": ["Grab stove knob",
+			"Twist stove knob to turnon",
+			"Remove gripper from knob"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"grab_spoon": {
+		"Steps": ["Move to spoon position",
+			"Grab spoon",
+			"Lift spoon up",
+			"Move spoon above pan",
+			"Turn spoon to mix 2",
+			"Remove spoon from pan",
+			"Place spoon in workspace" 
+		],
+		"Manipulation": ["FK",
+		"FK",
+		"FK",
+		"FK",
+		"FK",
+		"FK",
+		"FK"
+	]
+	},
+
+	"mix": {
+		"Steps": [
+			"Move to spoon position",
+			"Grab spoon",
+			"Lift spoon up",
+			"Move spoon above pan",
+			"Turn spoon to mix",
+			"Remove spoon from pan",
+			"Place spoon in workspace"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK",
+			"FK",
+			"FK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"reduce_heat": {
+		"Steps": ["Grab stove knob off",
+			"Twist stove knob to turnoff",
+			"Remove gripper from knob"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK"
+		]
+	},
+
+	"serve_oatmeal": {
+		"Steps": ["Pick up pan",
+			"Bring pan to pouring zone",
+			"Angle pan",
+			"Return pan to stove"
+		],
+		"Manipulation": ["FK",
+			"FK",
+			"FK",
+			"FK"
+		]
+	}
+}

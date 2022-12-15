@@ -1,0 +1,5 @@
+string[] state_features
+bool[] state_bools
+string[] possible_actions
+---
+bool success

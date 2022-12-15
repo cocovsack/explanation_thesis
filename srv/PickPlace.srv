@@ -1,0 +1,9 @@
+geometry_msgs/Pose start_pose
+geometry_msgs/Pose object_pose
+geometry_msgs/Pose destination_pose
+float64 object_depth
+
+---
+
+bool picked_object
+bool placed_object

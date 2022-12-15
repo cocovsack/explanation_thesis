@@ -1,0 +1,66 @@
+{
+	"Qv_0": {
+		"ingred_not_used": "We actually never used {}",
+		"begin": {
+			"dish_ov": "You asked me to make",
+			"no_dish_ov": "We are making something"
+		},
+		"nutr": {
+			"al_one": " {}",
+			"extras": ", {}",
+			"not_al_one": " un{}",
+			"not_extras": ", un{}"
+		},
+		"dish": " {}",
+		"ingred": ", and {} is used to make",
+		"end": {
+			"nutr_dish_ovs": " {} that is {}.",
+			"dish_ov": " {}.",
+			"nutr_ov": " {} meals."
+		}
+	},
+	"Qv_1": {
+		"begin": {
+			"no": "No, we can't use it because {} is not",
+			"yes": "Yes, we could have used {} since it is"
+		},
+		"nutr": {
+			"al_one": " {}",
+			"extras": ", {}",
+			"not_al_one": " un{}",
+			"not_extras": ", un{}"
+		},
+		"trans": {
+			"no": " and also not",
+			"yes": " that is also"
+		},
+		"dish": " an ingredient of {}",
+        "end": "."
+	},
+    "Qv_2": {
+		"do_transfered": "I {} the {} because you asked me to responsible for the",
+        "say_transfered": "Actually, you should {} the {} because you said you'd be responsible for the",
+		"dish": " {}",
+        "end": "."
+	},
+    "Qv_4": {
+		"ingred_used": "We actually did use {}.",
+		"begin": {
+			"dish_ov": "You asked me to make",
+			"no_dish_ov": "We are making something"
+		},
+		"nutr": {
+			"al_one": " {}",
+			"extras": ", {}",
+			"not_al_one": " un{}",
+			"not_extras": ", un{}"
+		},
+		"dish": " {}",
+		"ingred": ", and {} is not",
+		"end": {
+			"nutr_dish_ovs": " not an ingredient of {} that is {}.",
+			"dish_ov": " an inredient of {}.",
+			"nutr_ov": " a {} ingredient."
+		}
+	}
+}

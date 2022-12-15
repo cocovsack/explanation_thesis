@@ -1,0 +1,8 @@
+std_msgs/String action
+std_msgs/String action_type
+std_msgs/String item
+std_msgs/String dest
+std_msgs/Bool is_feedback
+
+---
+bool exec_success

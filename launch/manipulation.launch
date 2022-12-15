@@ -1,0 +1,22 @@
+<launch>
+
+  <arg name="move_robot" default="true" />
+<!-- Forward Kinematics -->
+    <node name="forward_kin_manipulation" pkg="chefbot" type="forward_kin_manipulation.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Inverse Kinematics -->
+    <node name="pick_and_place" pkg="chefbot" type="pick_and_place.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Text2Speech -->
+    <node name="t2s" pkg="chefbot" type="t2s.py" respawn="true" output="screen"/>
+<!-- -->
+
+<!-- Action Interface -->
+    <node name="action_interface" pkg="chefbot" type="action_interface.py" respawn="true" output="screen"/>
+    <param name="move_robot" value="$(arg move_robot)" />
+<!-- -->
+
+
+</launch>
