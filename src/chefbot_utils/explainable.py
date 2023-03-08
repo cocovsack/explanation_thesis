@@ -168,7 +168,8 @@ class ProcessCommand(object):
                                       "Ov_6": ("dont help me", self.TRANSFER),
                                       "Ov_7": ("forget rule {rule}", self.FORGET),
                                       "Ov_8": ("forget the last rule", self.FORGET),
-                                      "Ov_9": ("don't use anything {nutritional}", self.PROHIBIT)
+                                      "Ov_9": ("don't use anything {nutritional}", self.PROHIBIT),
+                                      "Ov_10": ("it isn't safe to use {ingredient} because I am allergic", self.PROHIBIT)
                                       }
 
         self.action_template_dict = {"gather": "gather the {item}",
@@ -319,6 +320,13 @@ class ProcessCommand(object):
             rules = ["not state(two_completed_dish) then not {nutr}(A_out)".format(nutr=nutr)]
             type = 'prohibit'
             action_space = self._get_action_space(constraints, template_key, type)
+        elif template_key == 'Ov_10':
+            ingredient = var
+            constraints = ingredient
+            rules = ["not state(two_completed_dish) then not {ingred}(A_out)".format(ingred=ingredient)]
+            type = 'prohibit'
+            #check the action space and rules
+            action_space = self._get_action_space(constraints, template_key, type)
         else:
             rules = ["foo"]
         
@@ -408,7 +416,10 @@ class ProcessCommand(object):
                     yield template.format(meal_side_1=m1, meal_side_2=m2).lower(), [m1, m2]
         elif name in ["Ov_8"]:
             yield template, ["last"]
-        else: #
+        elif name in ["Ov_10"]:
+            for i in self.ingredients:
+                yield template.format(ingredient=i).lower(), i
+        else: 
             for p in product(self.meal, self.side, self.shelf, self.nutritional):
                 m, s, sh, n = p
                 yield template.format(meal=m, side=s, shelf=sh, nutritional=n).lower(), p
