@@ -3,3 +3,4 @@ exp_venv/
 */*/__pycache__
 src/.DS_Store
 runs/
+src/chefbot_utils/explainability_trials/
