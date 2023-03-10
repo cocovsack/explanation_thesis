@@ -169,7 +169,8 @@ class ProcessCommand(object):
                                       "Ov_7": ("forget rule {rule}", self.FORGET),
                                       "Ov_8": ("forget the last rule", self.FORGET),
                                       "Ov_9": ("don't use anything {nutritional}", self.PROHIBIT),
-                                      "Ov_10": ("it isn't safe to use {ingredient} because I am allergic", self.PROHIBIT)
+                                      "Ov_10": ("it isn't safe to use {ingredient} because I am allergic", self.PROHIBIT),
+                                      "Ov_11": ("i want to use {ingredient}", self.PERMIT)
                                       }
 
         self.action_template_dict = {"gather": "gather the {item}",
@@ -323,9 +324,16 @@ class ProcessCommand(object):
         elif template_key == 'Ov_10':
             ingredient = var
             constraints = ingredient
-            rules = ["not state(two_completed_dish) then not {ingred}(A_out)".format(ingred=ingredient)]
+            rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
-            #check the action space and rules
+            #TK TK check the action space and rules
+            action_space = self._get_action_space(constraints, template_key, type)
+        elif template_key == 'Ov_11':
+            ingredient = var
+            constraints = ingredient
+            rules = ["has_{ingred}(A_out)".format(ingred=ingredient)]
+            type = 'permit'
+            #TK TK check the action space and rules
             action_space = self._get_action_space(constraints, template_key, type)
         else:
             rules = ["foo"]
@@ -416,7 +424,7 @@ class ProcessCommand(object):
                     yield template.format(meal_side_1=m1, meal_side_2=m2).lower(), [m1, m2]
         elif name in ["Ov_8"]:
             yield template, ["last"]
-        elif name in ["Ov_10"]:
+        elif name in ["Ov_10", "Ov_11"]:
             for i in self.ingredients:
                 yield template.format(ingredient=i).lower(), i
         else: 

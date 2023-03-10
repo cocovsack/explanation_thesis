@@ -282,11 +282,11 @@ class PrologOverlayList(OverlayList):
             ov.reset()
 
 class RosOverlayList(OverlayList):
-    """
-    The interface between the overlays and prolog and ROS.
-    ROS and swi-prolog dont play nice together so we need to
-    implement ROS specific versions of prolog stuff.
-    """
+    # ""
+    # The interface between the overlays and prolog and ROS.
+    # ROS and swi-prolog dont play nice together so we need to
+    # implement ROS specific versions of prolog stuff.
+    # """
     def __init__(self, overlay_list):
         super(RosOverlayList, self).__init__(overlay_list)
         rospy.wait_for_service("chefbot/prolog/query")

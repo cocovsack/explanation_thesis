@@ -8,14 +8,14 @@ from pddlgym.inference import find_satisfying_assignments, ProofSearchTree
 from collections import OrderedDict, defaultdict
 try:
     from learning_util import (ACTION_DICT, INGREDIENT_DICT,
-                               ALL_NUTRITIONAL_PREDS, ALL_MEAL_PREDS,
+                               ALL_NUTRITIONAL_PREDS, ALL_CPSC573_PREDS, ALL_MEAL_PREDS,
                                ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS,
                                NO_ACTION_TYPE_VARIANTS, PASTRY_LIST, MAIN_LIST,
                                OATMEAL_LIST
                                )
 except ModuleNotFoundError:
     from chefbot_utils.learning_util import (ACTION_DICT, INGREDIENT_DICT,
-                                             ALL_NUTRITIONAL_PREDS, ALL_MEAL_PREDS,
+                                             ALL_NUTRITIONAL_PREDS, ALL_CPSC573_PREDS, ALL_MEAL_PREDS,
                                              ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS,
                                              NO_ACTION_TYPE_VARIANTS, PASTRY_LIST, MAIN_LIST,
                                              OATMEAL_LIST
@@ -220,7 +220,7 @@ class PrologClassifier(object):
 
 
         preds = set.union(*[ALL_NUTRITIONAL_PREDS, ALL_MEAL_PREDS,
-                            ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS])
+                            ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS, ALL_CPSC573_PREDS])
         self._action_classifier_dict = {p:("{}(X)".format(p), 1) for p in preds}
         self._action_classifier_dict['equiv_action'] = ("equiv_action({X},{Y})", 2)
         self._action_classifier_dict['do_only'] = ("do_only({X})", 1)
@@ -249,6 +249,7 @@ class PrologClassifier(object):
         for pred in self._action_classifier_dict:
             _, arity = self._action_classifier_dict[pred]
             rule = dyn_pred_template.format(pred=pred, arity=arity)
+            print(rule)
             self.p.assertz(rule)
             # except Exception as e:
             #     import pdb
@@ -313,7 +314,13 @@ class PrologClassifier(object):
         # import pdb
         # pdb.set_trace()
         # print("[query] ", self._str_to_action_dict)
+
+        # query seems to be empty!!!
+        testing = []
         for res in query:
+            import pdb
+            # print("HERREEEEE", res)
+            testing.append(res)
             # If all of the results is of type Variable, the result is invalid
             if  all([isinstance(v, Variable) for v in res.values()]):
                 continue
@@ -336,8 +343,11 @@ class PrologClassifier(object):
                 import pdb; pdb.set_trace()
                 raise
         # remove any duplicate query results as they will be counted twice during  reasoning
+        # import pdb
+        # pdb.set_trace()
+        print(testing)
+        print(ret_list)
         ret_list = [dict(t) for t in set(tuple(d.items()) for d in ret_list)]
-        print("HERREEEEE", ret_list)
         return ret_list
 
 
@@ -348,10 +358,13 @@ class PrologClassifier(object):
         """
         for a, _ in self._action_classifier_dict.values():
             lifted_a = a.format(X="X", Y="Y")
+            # print(lifted_a)
             # print("retracting: ", lifted_a)
             # NOTE:  Prolog.query returns a generator that need to
             # be iterated in order to work properly
             # list(self.p.query("retractall({})".format(lifted_a)))
+            # import pdb
+            # pdb.set_trace()
             list(self.p.query("retractall({})".format(lifted_a)))
             # print("retracting: ", lifted_a)
             # Check if knowledge base was successfully reset

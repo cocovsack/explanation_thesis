@@ -53,6 +53,9 @@ PBBANANAOATMEAL_INGREDIENTS = PLAINOATMEAL_INGREDIENTS.union(set(["banana",
 
 ALL_OATMEAL_INGREDIENTS = FRUITYCHOCOLATEOATMEAL_INGREDIENTS.union(PBBANANAOATMEAL_INGREDIENTS)
 
+ALL_INGREDIENTS = set(PASTRY_LIST).union(ALL_OATMEAL_INGREDIENTS).union(CEREAL_INGREDIENTS)
+ALL_CPSC573_PREDS = set(["has_{}".format(i) for i in ALL_INGREDIENTS])
+
 ALL_NUTRITIONAL_PREDS = set(["fruity", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread"])
 ALL_MEAL_PREDS = set(["making_oatmeal", "making_cereal", "making_pastry"])
 ALL_ACTION_TYPE_PREDS = set(["do", "say"])
@@ -61,30 +64,30 @@ NUTRITIONAL_PREDS_NO_DAIRY = ALL_NUTRITIONAL_PREDS  - set(["dairy"])
 ALL_PRECURSOR_PREDS = set(["{}_precursor".format(n) for n in ALL_NUTRITIONAL_PREDS])
 PRECURSOR_PREDS_NO_DAIRY = set(["{}_precursor".format(n) for n in NUTRITIONAL_PREDS_NO_DAIRY])
 
-INGREDIENT_DICT = defaultdict(set, {'oats': set(['making_oatmeal', "main_precursor"]).union(ALL_PRECURSOR_PREDS),
+INGREDIENT_DICT = defaultdict(set, {'oats': set(['has_oats', 'making_oatmeal', "main_precursor"]).union(ALL_PRECURSOR_PREDS),
                                     'bowl' :set(['making_oatmeal', 'making_cereal', 'quick']).union(ALL_PRECURSOR_PREDS),
-                                    'water': set(['making_oatmeal']).union(PRECURSOR_PREDS_NO_DAIRY),
-                                    'salt' : set(['making_oatmeal', 'sodium']).union(ALL_PRECURSOR_PREDS),
+                                    'water': set(['has_water', 'making_oatmeal']).union(PRECURSOR_PREDS_NO_DAIRY),
+                                    'salt' : set(['has_salt', 'making_oatmeal', 'sodium']).union(ALL_PRECURSOR_PREDS),
                                     'mixingspoon': set(['making_oatmeal', 'object', 'quick']).union(ALL_PRECURSOR_PREDS),
                                     'eatingspoon': set(['making_oatmeal', 'making_cereal','quick']).union(ALL_PRECURSOR_PREDS),
-                                    'milk': set(['making_oatmeal','making_cereal',
+                                    'milk': set(['has_milk', 'making_oatmeal','making_cereal',
                                                  'dairy', 'protein', 'nonvegan', "quick", ]).union(ALL_PRECURSOR_PREDS),
                                     'measuringcup': set(['making_oatmeal', 'object']).union(PRECURSOR_PREDS_NO_DAIRY),
-                                    'egg' :set(['making_pastry', 'nonvegan', 'protein', "healthy"]),
-                                    'pie': set(['making_pastry', 'sweet', 'gluten', "fruity"]),
-                                    'muffin': set(['making_pastry', "healthy", "gluten"]),
-                                    'roll': set(['making_pastry', 'gluten', "bread"]),
-                                    "jellypastry": set(["making_pastry", "gluten","sweet", "bread"]),
+                                    'egg' :set(['has_egg', 'making_pastry', 'nonvegan', 'protein', "healthy"]),
+                                    'pie': set(['has_pie', 'making_pastry', 'sweet', 'gluten', "fruity"]),
+                                    'muffin': set(['has_muffin', 'making_pastry', "healthy", "gluten"]),
+                                    'roll': set(['has_roll', 'making_pastry', 'gluten', "bread"]),
+                                    "jellypastry": set(["has_jellypastry", "making_pastry", "gluten","sweet", "bread"]),
                                     "microwave": set(["making_pastry", "object"]).union(ALL_PRECURSOR_PREDS),
                                     "stove": set(["making_oatmeal", "object"]).union(ALL_PRECURSOR_PREDS),
-                                    "banana": set(["making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
-                                    "strawberry": set(["making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
-                                    "blueberry": set(["making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
-                                    "peanutbutter": set(["making_oatmeal", "protein", "topping"]),
-                                    "chocolatechips": set(["making_oatmeal", "sweet",
+                                    "banana": set(["has_banana", "making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
+                                    "strawberry": set(["has_strawberry", "making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
+                                    "blueberry": set(["has_blueberry", "making_oatmeal", "fruity", "sweet", "topping", "healthy"]),
+                                    "peanutbutter": set(["has_peanutbutter", "making_oatmeal", "protein", "topping"]),
+                                    "chocolatechips": set(["has_chocolatechips", "making_oatmeal", "sweet",
                                                            "dairy", "nonvegan", "topping"]),
-                                    "nuts": set(['making_oatmeal', 'protein']),
-                                    "cocopuffs": set(["making_cereal", "sweet", "gluten", 'quick']),
+                                    "nuts": set(['has_nuts','making_oatmeal', 'protein']),
+                                    "cocopuffs": set(["has_cocopuffs", "making_cereal", "sweet", "gluten", 'quick']),
                                     "say": set(["say"]),
                                     "do": set(["do"]),
                                     "pan": set(["making_oatmeal", "object"]).union(ALL_PRECURSOR_PREDS),
