@@ -54,6 +54,7 @@ INGREDIENTS = ['oats', 'milk', 'measuring cup', 'strawberry', 'blueberry', 'bana
                    'pie', 'muffin', 'peanutbutter', 'egg', 'roll', 'jellypastry', 'bowl']
 MEAL = ['oatmeal', 'cereal']
 SIDE = ['pastry']
+DISHES = ['oatmeal', 'cereal', 'pastry']
 NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread"]
 
 
@@ -170,7 +171,8 @@ class ProcessCommand(object):
                                       "Ov_8": ("forget the last rule", self.FORGET),
                                       "Ov_9": ("don't use anything {nutritional}", self.PROHIBIT),
                                       "Ov_10": ("it isn't safe to use {ingredient} because I am allergic", self.PROHIBIT),
-                                      "Ov_11": ("i want to use {ingredient}", self.PERMIT)
+                                      "Ov_11": ("i want to use {ingredient}", self.PERMIT),
+                                      "Ov_12": ("user isn't allowed to eat {ingredient}", self.PROHIBIT)
                                       }
 
         self.action_template_dict = {"gather": "gather the {item}",
@@ -335,6 +337,13 @@ class ProcessCommand(object):
             type = 'permit'
             #TK TK check the action space and rules
             action_space = self._get_action_space(constraints, template_key, type)
+        elif template_key == 'Ov_12':
+            ingredient = var
+            constraints = [ingredient, "authority"]
+            rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
+            type = 'prohibit'
+            #TK TK check the action space and rules
+            action_space = self._get_action_space(constraints, template_key, type)
         else:
             rules = ["foo"]
         
@@ -424,7 +433,7 @@ class ProcessCommand(object):
                     yield template.format(meal_side_1=m1, meal_side_2=m2).lower(), [m1, m2]
         elif name in ["Ov_8"]:
             yield template, ["last"]
-        elif name in ["Ov_10", "Ov_11"]:
+        elif name in ["Ov_10", "Ov_11", "Ov_12"]:
             for i in self.ingredients:
                 yield template.format(ingredient=i).lower(), i
         else: 
@@ -539,7 +548,9 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
         for el in ele:
             overlay_permutations.append(list(el))
 
-    for user_overlay in overlay_permutations:
+    for user_overlay in [overlay_permutations[-1]]:
+        # user_overlay = [user_overlay]
+
         gt_htn.reset()
         agent.reset()
         agent.overlays = None
@@ -735,6 +746,7 @@ def generate_explanations (action_seq, overlays):
     in_cmd = input("query the robot: ").strip()
     query = Query()
     res = query.process_query(in_cmd)
+    explanations = {}
 
     # create dictionaries to track the overlays
     relevant_overlays = defaultdict(list)
@@ -747,347 +759,388 @@ def generate_explanations (action_seq, overlays):
 
     exp_json = json.load(open(os.path.join(config_dir, "explanation_template.json")))
 
-
-    # query 0: "why did you use _____?"
-    # answer: "You asked me to make [nutr][dish], and [ingred] is required to make [dish][nutr]"
-    # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
-    # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
-    if res["key"] == "Qv_0":
-        template = exp_json["Qv_0"]
-        ingredient = res["params"][0]
-        flag = False
-        for action in action_seq:
-            if "gather({i}:".format(i =ingredient) in str(action):
-                flag = True
-        # if ingredient isn't gathered, respond with error
-        if flag == False:
-            explanation = template["ingred_not_used"].format(ingredient)
-        # otherwise, identify which overlay's action space includes that ingredient
-        else:
-            for overlay in overlays:
-                if ingredient in overlay["overlay_action_space"]:
-                    relevant_overlays[overlay["key"]].append(overlay)
-            
-            # Beginning of explanation
-            # If a dish was specificed: "You asked me to make"
-            dish, dish_clause = get_dish_exp(relevant_overlays, template, ingredient)
-            # no dish was specified
-            if not dish:
-                begin = template["begin"]["no_dish_ov"]
-                # param = "breakfast"
-                # dish_clause = template["dish"].format(param)
-            else:
-                begin = template["begin"]["dish_ov"]
-
-            # Nutrtional details
-            # If nutr info was permitted add those qualities: " healthy, fruity"
-            nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
-            
-            # Closing explanation
-            if nutr_clause and dish_clause:
-                end_clause = template["end"]["nutr_dish_ovs"].format(dish, nutr) #TKTK what if multiple params?
-            elif dish_clause:
-                end_clause = template["end"]["dish_ov"].format(dish) #TKTK what if multiple params?
-            elif nutr_clause:
-                end_clause = template["end"]["nutr_ov"].format(nutr) #TKTK what if multiple params?
-            # no clear reason based on preferences
-            else:
-                explanation = "This was not based on any directives you gave me. I randomly chose to use {}.".format(ingredient)
-                print(explanation)
-                return True
-
-            ingredient_clause = template["ingred"].format(ingredient)
-            explanation = begin + nutr_clause + dish_clause + ingredient_clause + end_clause
-
-    # query 1: "can I use [ingredient] instead?"
-    # answer: "Yes, we could have used {} since it is a valid ingredient of {} that is also {}"
-    # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
-    # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
-    elif res["key"] == "Qv_1":
-        template = exp_json["Qv_1"]
-        ingredient = res["params"][0]
-        base_action_space = set(overlays[0]["overlay_action_space"])
-        for i in range(1, len(overlays)):
-            base_action_space.intersection_update(set(overlays[i]["overlay_action_space"]))
-        # if it is not in the intersection, find which action space prohibited the use of the ingredient
-        if ingredient not in base_action_space:
-            for overlay in overlays:
-                if ingredient not in overlay["overlay_action_space"]:
-                    relevant_overlays[overlay["key"]].append(overlay)
-            
-            # Beginning of explanation
-            # "No, we couldn't use [ingred]" becuase it is not"
-            begin = template["begin"]["no"].format(ingredient)
-            
-            # Nutrtional details
-            nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
-
-            # Dish details
-            # "is not an ingredient of [dish]"
-            dish, dish_clause = get_non_dish_exp(relevant_overlays, template, ingredient)
-
-            # Add a transition if there is both a nutritional and a dish reason 
-            # " and also not"
-            if nutr_clause and dish_clause:
-                nutr_clause += template["trans"]["no"]
-            # if no information precluded it
-            # if not nutr_clause and not dish_clause:
-            #     explanation = ""
-
-            period = template["end"]
-        
-            explanation = begin + nutr_clause + dish_clause + period  
-
-        # Otherwise, report that is a valid ingredient for __ reasons
-        else:
-            for overlay in overlays:
-                if ingredient in overlay["overlay_action_space"]:
-                    relevant_overlays[overlay["key"]].append(overlay)
-
-            # "Yes, we could have used {} since it is a valid ingredient of"
-            begin = template["begin"]["yes"].format(ingredient)
-            # Dish from all overlays 
-            dish, dish_clause = get_dish_exp(relevant_overlays, template, ingredient)
-            # Nutrition from all overlays 
-            nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
-            # Transition "that is also"
-            if nutr_clause and dish_clause:
-                dish_clause += template["trans"]["yes"]
-            period = template["end"]
-
-            explanation = begin + dish_clause + nutr_clause + period
-
+    template_all = exp_json["all"]
     
-    # query 2: "why did you ____ with the ___?"
-    # answer: "I {} the {} because you asked me to responsible for the {}"
-    # Handling: Ov_3, Ov_5, and Ov_9 - to determine do transfers AND Ov_4 and Ov_5 - to determine say transfers
-    # TKTKTK what should we do with appliances?
-    elif res["key"] == "Qv_2":
-        action, ingredient = res["params"]
-        template = exp_json["Qv_2"]
-
-        # find all the transfer overlays with the ingredient
-        for overlay in overlays:
-            type = overlay["key"]
-            if (type == 'Ov_3' or type == 'Ov_5') and ingredient in overlay["overlay_action_space"]:
-                do_transfer_overlays[overlay["key"]].append(overlay)
-            elif (type == 'Ov_4' or type == 'Ov_5') and ingredient in overlay["overlay_action_space"]:
-                say_transfer_overlays[overlay["key"]].append(overlay)
-        
-        # if no transfer overlays:
-        if not do_transfer_overlays and not say_transfer_overlays:
-            explanation = "You didn't specify who should be in charge of that. You are welcome to {} with {} if you want!".format(action, ingredient)
-            
-        else:
-            # get DO dish
-            assigned_dish, do_dish_clause  = get_dish_exp(do_transfer_overlays, template, ingredient)
-            if assigned_dish:
-                begin = template["do_transfered"].format(action, ingredient)
-                dish_clause = do_dish_clause
-            # otherwise get SAY
-            else:
-                say_dish_clause = ""
-                for i in range(0, len(say_transfer_overlays["Ov_4"])):
-                    said_dish = str(say_transfer_overlays["Ov_4"][i]["params"][0])
-                    say_dish_clause += template["dish"].format(said_dish)
-                for i in range(0, len(say_transfer_overlays["Ov_5"])):
-                    said_dish = str(say_transfer_overlays["Ov_5"][i]["params"][1])
-                    say_dish_clause += template["dish"].format(said_dish)
-                if said_dish:
-                    begin = template["say_transfered"].format(action, ingredient)
-                    dish_clause = say_dish_clause
-            explanation = begin + dish_clause + template["end"]
-    # q3: why did you make [] first?
-    # Handling: Ov_0 -- to determine ordering
-    elif res["key"] == "Qv_3":
-        meal, order= res["params"]
-        for overlay in overlays:
-            if overlay["key"] == "Ov_0":
-                m1, m2 = overlay["params"]
-                if m1 == meal and order == "first":
-                    explanation = "You asked me to make {} first".format(meal)
-                elif m2 == meal and order == "second":
-                    explanation = "You asked me to make {} second".format(meal)
-                else:
-                    explanation = "I actually didn't make {} {}".format(meal, order)
-            else:
-                explanation = "You didn't give me any instructions on what order to prepare things in. I can make the {} {} if you want!".format(meal, order)
-    # query 4: "why didn't you use _____?"
-    # answer: "You asked me to make [nutr][dish], and [ingred] is not an ingredient of {} that is {}.
-    # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
-    # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
-    elif res["key"] == "Qv_4":
-        template = exp_json["Qv_4"]
-        ingredient = res["params"][0]
-        flag = False
-
-        for action in action_seq:
-            if "gather({i}:".format(i =ingredient) not in str(action):
-                flag = True
-        # if ingredient was actually indeed gathered, respond with error
-        if flag == True:
-            explanation = template["ingred_used"].format(ingredient)
-        # otherwise, identify which overlay's action space excluded that ingredient
-        else:
-            for overlay in overlays:
-                if ingredient not in overlay["overlay_action_space"]:
-                    relevant_overlays[overlay["key"]].append(overlay)
-            
-            # Beginning of explanation
-            # If a dish was specificed: "You asked me to make"
-            dish, dish_clause = get_non_dish_exp(relevant_overlays, template, ingredient)
-            # no dish was specified
-            if not dish:
-                begin = template["begin"]["no_dish_ov"]
-            else:
-                begin = template["begin"]["dish_ov"]
-
-            # Nutrtional details
-            # If nutr info was permitted add those qualities: " healthy, fruity"
-            nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
-            
-            # Closing explanation
-            if nutr_clause and dish_clause:
-                end_clause = template["end"]["nutr_dish_ovs"].format(dish, nutr) #TKTK what if multiple params?
-            elif dish_clause:
-                end_clause = template["end"]["dish_ov"].format(dish) #TKTK what if multiple params?
-            elif nutr_clause:
-                end_clause = template["end"]["nutr_ov"].format(nutr) #TKTK what if multiple params?
-
-            ingredient_clause = template["ingred"].format(ingredient)
-            
-            
-            explanation = begin + nutr_clause + dish_clause + ingredient_clause + end_clause
-    else:
-        explanation = "That query was invalid. Please ask again!"
-    print(explanation)
+    print(overlays)
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
+    explanations["all"] = template_all["beginning"]
+    print(explanations)
     return True
 
 
-def check_order(meal, order):
-    ### TKTK how to do this
-    # check if putinmicrowave (pastry) is before/after pourwater/other
-    return True
+def get_clauses(overlays):
+    permissive_adjectives = []
+    permissive_dishes = []
+    permissive_ingredients = []
+    prohibitive_adjectives = []
+    prohibitive_dishes = []
+    prohibitive_ingredients = []
+    for overlay in overlays:
+        if type(overlay["params"]) != list:
+            overlay["params"] = [overlay["params"]]
+        if overlay["overlay_type"] == "permit":
+            for param in overlay["params"]:
+                if param in NUTRITIONAL:
+                    permissive_adjectives.append(param)
+                elif param in DISHES:
+                    permissive_dishes.append(param)
+                elif param in INGREDIENTS:
+                    permissive_ingredients.append(param)
+        elif overlay["overlay_type"] == "prohibit":
+            for param in overlay["params"]:
+                if param in NUTRITIONAL:
+                    prohibitive_adjectives.append(param)
+                elif param in DISHES:
+                    prohibitive_dishes.append(param)
+                elif param in INGREDIENTS:
+                    prohibitive_ingredients.append(param)
+    return permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients
+        
 
-def get_nutritional_exp(relevant_overlays, template):
-        nutr = ""   
-        # add all the permissive nutritional qualities
-        for i in range(0, len(relevant_overlays["Ov_1"])):
-            if i == 0:
-                count = "al_one"
-            else:
-                count = "extras"
-            param = str(relevant_overlays["Ov_1"][i]["params"][0])
-            nutr += template["nutr"][count].format(param)
-        # add all the prohibited nutritional qualities
-        for i in range(0, len(relevant_overlays["Ov_9"])):
-            if i == 0:
-                count = "not_al_one"
-            else:
-                count = "not_extras"
-            param = str(relevant_overlays["Ov_9"][i]["params"][0])
-            nutr += template["nutr"][count].format(param)
-        # If no dish was assigned in overlays
-        if not nutr:
-            # param = "breakfast"
-            # dish_clause = template["dish"].format(param)
-            param = ""
-            nutr = ""
-        return param, nutr
+#     explanations["none"]
+
+
+#     # query 0: "why did you use _____?"
+#     # answer: "You asked me to make [nutr][dish], and [ingred] is required to make [dish][nutr]"
+#     # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
+#     # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
+#     if res["key"] == "Qv_0":
+#         template = exp_json["Qv_0"]
+#         ingredient = res["params"][0]
+#         flag = False
+#         for action in action_seq:
+#             if "gather({i}:".format(i =ingredient) in str(action):
+#                 flag = True
+#         # if ingredient isn't gathered, respond with error
+#         if flag == False:
+#             explanation = template["ingred_not_used"].format(ingredient)
+#         # otherwise, identify which overlay's action space includes that ingredient
+#         else:
+#             for overlay in overlays:
+#                 if ingredient in overlay["overlay_action_space"]:
+#                     relevant_overlays[overlay["key"]].append(overlay)
+            
+#             # Beginning of explanation
+#             # If a dish was specificed: "You asked me to make"
+#             dish, dish_clause = get_dish_exp(relevant_overlays, template, ingredient)
+#             # no dish was specified
+#             if not dish:
+#                 begin = template["begin"]["no_dish_ov"]
+#                 # param = "breakfast"
+#                 # dish_clause = template["dish"].format(param)
+#             else:
+#                 begin = template["begin"]["dish_ov"]
+
+#             # Nutrtional details
+#             # If nutr info was permitted add those qualities: " healthy, fruity"
+#             nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
+            
+#             # Closing explanation
+#             if nutr_clause and dish_clause:
+#                 end_clause = template["end"]["nutr_dish_ovs"].format(dish, nutr) #TKTK what if multiple params?
+#             elif dish_clause:
+#                 end_clause = template["end"]["dish_ov"].format(dish) #TKTK what if multiple params?
+#             elif nutr_clause:
+#                 end_clause = template["end"]["nutr_ov"].format(nutr) #TKTK what if multiple params?
+#             # no clear reason based on preferences
+#             else:
+#                 explanation = "This was not based on any directives you gave me. I randomly chose to use {}.".format(ingredient)
+#                 print(explanation)
+#                 return True
+
+#             ingredient_clause = template["ingred"].format(ingredient)
+#             explanation = begin + nutr_clause + dish_clause + ingredient_clause + end_clause
+
+#     # query 1: "can I use [ingredient] instead?"
+#     # answer: "Yes, we could have used {} since it is a valid ingredient of {} that is also {}"
+#     # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
+#     # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
+#     elif res["key"] == "Qv_1":
+#         template = exp_json["Qv_1"]
+#         ingredient = res["params"][0]
+#         base_action_space = set(overlays[0]["overlay_action_space"])
+#         for i in range(1, len(overlays)):
+#             base_action_space.intersection_update(set(overlays[i]["overlay_action_space"]))
+#         # if it is not in the intersection, find which action space prohibited the use of the ingredient
+#         if ingredient not in base_action_space:
+#             for overlay in overlays:
+#                 if ingredient not in overlay["overlay_action_space"]:
+#                     relevant_overlays[overlay["key"]].append(overlay)
+            
+#             # Beginning of explanation
+#             # "No, we couldn't use [ingred]" becuase it is not"
+#             begin = template["begin"]["no"].format(ingredient)
+            
+#             # Nutrtional details
+#             nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
+
+#             # Dish details
+#             # "is not an ingredient of [dish]"
+#             dish, dish_clause = get_non_dish_exp(relevant_overlays, template, ingredient)
+
+#             # Add a transition if there is both a nutritional and a dish reason 
+#             # " and also not"
+#             if nutr_clause and dish_clause:
+#                 nutr_clause += template["trans"]["no"]
+#             # if no information precluded it
+#             # if not nutr_clause and not dish_clause:
+#             #     explanation = ""
+
+#             period = template["end"]
+        
+#             explanation = begin + nutr_clause + dish_clause + period  
+
+#         # Otherwise, report that is a valid ingredient for __ reasons
+#         else:
+#             for overlay in overlays:
+#                 if ingredient in overlay["overlay_action_space"]:
+#                     relevant_overlays[overlay["key"]].append(overlay)
+
+#             # "Yes, we could have used {} since it is a valid ingredient of"
+#             begin = template["begin"]["yes"].format(ingredient)
+#             # Dish from all overlays 
+#             dish, dish_clause = get_dish_exp(relevant_overlays, template, ingredient)
+#             # Nutrition from all overlays 
+#             nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
+#             # Transition "that is also"
+#             if nutr_clause and dish_clause:
+#                 dish_clause += template["trans"]["yes"]
+#             period = template["end"]
+
+#             explanation = begin + dish_clause + nutr_clause + period
+
+    
+#     # query 2: "why did you ____ with the ___?"
+#     # answer: "I {} the {} because you asked me to responsible for the {}"
+#     # Handling: Ov_3, Ov_5, and Ov_9 - to determine do transfers AND Ov_4 and Ov_5 - to determine say transfers
+#     # TKTKTK what should we do with appliances?
+#     elif res["key"] == "Qv_2":
+#         action, ingredient = res["params"]
+#         template = exp_json["Qv_2"]
+
+#         # find all the transfer overlays with the ingredient
+#         for overlay in overlays:
+#             type = overlay["key"]
+#             if (type == 'Ov_3' or type == 'Ov_5') and ingredient in overlay["overlay_action_space"]:
+#                 do_transfer_overlays[overlay["key"]].append(overlay)
+#             elif (type == 'Ov_4' or type == 'Ov_5') and ingredient in overlay["overlay_action_space"]:
+#                 say_transfer_overlays[overlay["key"]].append(overlay)
+        
+#         # if no transfer overlays:
+#         if not do_transfer_overlays and not say_transfer_overlays:
+#             explanation = "You didn't specify who should be in charge of that. You are welcome to {} with {} if you want!".format(action, ingredient)
+            
+#         else:
+#             # get DO dish
+#             assigned_dish, do_dish_clause  = get_dish_exp(do_transfer_overlays, template, ingredient)
+#             if assigned_dish:
+#                 begin = template["do_transfered"].format(action, ingredient)
+#                 dish_clause = do_dish_clause
+#             # otherwise get SAY
+#             else:
+#                 say_dish_clause = ""
+#                 for i in range(0, len(say_transfer_overlays["Ov_4"])):
+#                     said_dish = str(say_transfer_overlays["Ov_4"][i]["params"][0])
+#                     say_dish_clause += template["dish"].format(said_dish)
+#                 for i in range(0, len(say_transfer_overlays["Ov_5"])):
+#                     said_dish = str(say_transfer_overlays["Ov_5"][i]["params"][1])
+#                     say_dish_clause += template["dish"].format(said_dish)
+#                 if said_dish:
+#                     begin = template["say_transfered"].format(action, ingredient)
+#                     dish_clause = say_dish_clause
+#             explanation = begin + dish_clause + template["end"]
+#     # q3: why did you make [] first?
+#     # Handling: Ov_0 -- to determine ordering
+#     elif res["key"] == "Qv_3":
+#         meal, order= res["params"]
+#         for overlay in overlays:
+#             if overlay["key"] == "Ov_0":
+#                 m1, m2 = overlay["params"]
+#                 if m1 == meal and order == "first":
+#                     explanation = "You asked me to make {} first".format(meal)
+#                 elif m2 == meal and order == "second":
+#                     explanation = "You asked me to make {} second".format(meal)
+#                 else:
+#                     explanation = "I actually didn't make {} {}".format(meal, order)
+#             else:
+#                 explanation = "You didn't give me any instructions on what order to prepare things in. I can make the {} {} if you want!".format(meal, order)
+#     # query 4: "why didn't you use _____?"
+#     # answer: "You asked me to make [nutr][dish], and [ingred] is not an ingredient of {} that is {}.
+#     # Handling: Ov_0, Ov_3, Ov_5 -- to determine what type of dish to make
+#     # Handling: Ov_1 and Ov_9-- to determine what nutritions are allowed
+#     elif res["key"] == "Qv_4":
+#         template = exp_json["Qv_4"]
+#         ingredient = res["params"][0]
+#         flag = False
+
+#         for action in action_seq:
+#             if "gather({i}:".format(i =ingredient) not in str(action):
+#                 flag = True
+#         # if ingredient was actually indeed gathered, respond with error
+#         if flag == True:
+#             explanation = template["ingred_used"].format(ingredient)
+#         # otherwise, identify which overlay's action space excluded that ingredient
+#         else:
+#             for overlay in overlays:
+#                 if ingredient not in overlay["overlay_action_space"]:
+#                     relevant_overlays[overlay["key"]].append(overlay)
+            
+#             # Beginning of explanation
+#             # If a dish was specificed: "You asked me to make"
+#             dish, dish_clause = get_non_dish_exp(relevant_overlays, template, ingredient)
+#             # no dish was specified
+#             if not dish:
+#                 begin = template["begin"]["no_dish_ov"]
+#             else:
+#                 begin = template["begin"]["dish_ov"]
+
+#             # Nutrtional details
+#             # If nutr info was permitted add those qualities: " healthy, fruity"
+#             nutr, nutr_clause = get_nutritional_exp(relevant_overlays, template)
+            
+#             # Closing explanation
+#             if nutr_clause and dish_clause:
+#                 end_clause = template["end"]["nutr_dish_ovs"].format(dish, nutr) #TKTK what if multiple params?
+#             elif dish_clause:
+#                 end_clause = template["end"]["dish_ov"].format(dish) #TKTK what if multiple params?
+#             elif nutr_clause:
+#                 end_clause = template["end"]["nutr_ov"].format(nutr) #TKTK what if multiple params?
+
+#             ingredient_clause = template["ingred"].format(ingredient)
+            
+            
+#             explanation = begin + nutr_clause + dish_clause + ingredient_clause + end_clause
+#     else:
+#         explanation = "That query was invalid. Please ask again!"
+#     print(explanation)
+#     return True
+
+
+# def check_order(meal, order):
+#     ### TKTK how to do this
+#     # check if putinmicrowave (pastry) is before/after pourwater/other
+#     return True
+
+# def get_nutritional_exp(relevant_overlays, template):
+#         nutr = ""   
+#         # add all the permissive nutritional qualities
+#         for i in range(0, len(relevant_overlays["Ov_1"])):
+#             if i == 0:
+#                 count = "al_one"
+#             else:
+#                 count = "extras"
+#             param = str(relevant_overlays["Ov_1"][i]["params"][0])
+#             nutr += template["nutr"][count].format(param)
+#         # add all the prohibited nutritional qualities
+#         for i in range(0, len(relevant_overlays["Ov_9"])):
+#             if i == 0:
+#                 count = "not_al_one"
+#             else:
+#                 count = "not_extras"
+#             param = str(relevant_overlays["Ov_9"][i]["params"][0])
+#             nutr += template["nutr"][count].format(param)
+#         # If no dish was assigned in overlays
+#         if not nutr:
+#             # param = "breakfast"
+#             # dish_clause = template["dish"].format(param)
+#             param = ""
+#             nutr = ""
+#         return param, nutr
 
 
 
-def get_dish_exp(relevant_overlays, template, ingredient):
-    Ov0_len = len(relevant_overlays["Ov_0"])
-    Ov3_len = len(relevant_overlays["Ov_3"])
-    Ov5_len = len(relevant_overlays["Ov_5"])
-    dish_clause = ""
-    # make sure its a valid ingredient
-    if ingredient not in INGREDIENTS and ingredient not in MEAL and ingredient not in SIDE:
-        param = ""
-        dish_clause = ""
-        return param, dish_clause
-    for i in range(0, Ov0_len):
-        # determine which dish is relevant:
-        # TKTK what if multiple types of this overlay???
-        if ingredient not in relevant_overlays["Ov_0"][i]["overlay_action_space"]:
-            continue
-        ingred_in_aspace = relevant_overlays["Ov_0"][i]["overlay_action_space"][ingredient]
-        if "making_oatmeal" in ingred_in_aspace:
-            param = "oatmeal"
-            if param not in dish_clause:
-                dish_clause += template["dish"].format("oatmeal")
-        elif "making_pastry" in ingred_in_aspace:
-            param = "a pastry"
-            if param not in dish_clause:    
-                dish_clause += template["dish"].format("a pastry")
-        elif "making_cereal" in ingred_in_aspace:
-            param = "cereal"
-            if param  not in dish_clause:
-                dish_clause += template["dish"].format("cereal")
-    # If one dish was assigned: " oatmeal"
-    for i in range(0, Ov3_len):
-        param = str(relevant_overlays["Ov_3"][i]["params"][0])
-        if param not in dish_clause:
-            dish_clause += template["dish"].format(param)
-    for i in range(0, Ov5_len):
-        param = str(relevant_overlays["Ov_5"][i]["params"][0])
-        if param not in dish_clause:
-            dish_clause += template["dish"].format(param)
+# def get_dish_exp(relevant_overlays, template, ingredient):
+#     Ov0_len = len(relevant_overlays["Ov_0"])
+#     Ov3_len = len(relevant_overlays["Ov_3"])
+#     Ov5_len = len(relevant_overlays["Ov_5"])
+#     dish_clause = ""
+#     # make sure its a valid ingredient
+#     if ingredient not in INGREDIENTS and ingredient not in MEAL and ingredient not in SIDE:
+#         param = ""
+#         dish_clause = ""
+#         return param, dish_clause
+#     for i in range(0, Ov0_len):
+#         # determine which dish is relevant:
+#         # TKTK what if multiple types of this overlay???
+#         if ingredient not in relevant_overlays["Ov_0"][i]["overlay_action_space"]:
+#             continue
+#         ingred_in_aspace = relevant_overlays["Ov_0"][i]["overlay_action_space"][ingredient]
+#         if "making_oatmeal" in ingred_in_aspace:
+#             param = "oatmeal"
+#             if param not in dish_clause:
+#                 dish_clause += template["dish"].format("oatmeal")
+#         elif "making_pastry" in ingred_in_aspace:
+#             param = "a pastry"
+#             if param not in dish_clause:    
+#                 dish_clause += template["dish"].format("a pastry")
+#         elif "making_cereal" in ingred_in_aspace:
+#             param = "cereal"
+#             if param  not in dish_clause:
+#                 dish_clause += template["dish"].format("cereal")
+#     # If one dish was assigned: " oatmeal"
+#     for i in range(0, Ov3_len):
+#         param = str(relevant_overlays["Ov_3"][i]["params"][0])
+#         if param not in dish_clause:
+#             dish_clause += template["dish"].format(param)
+#     for i in range(0, Ov5_len):
+#         param = str(relevant_overlays["Ov_5"][i]["params"][0])
+#         if param not in dish_clause:
+#             dish_clause += template["dish"].format(param)
 
-    # If no dish was assigned in overlays
-    if not dish_clause:
-        param = ""
-        dish_clause = ""
+#     # If no dish was assigned in overlays
+#     if not dish_clause:
+#         param = ""
+#         dish_clause = ""
       
     
-    return param, dish_clause
+#     return param, dish_clause
 
-def get_non_dish_exp(relevant_overlays, template, ingredient):
-    Ov0_len = len(relevant_overlays["Ov_0"])
-    Ov3_len = len(relevant_overlays["Ov_3"])
-    Ov5_len = len(relevant_overlays["Ov_5"])
-    dish_clause = ""
-    # make sure its a valid ingredient
-    if ingredient not in INGREDIENTS and ingredient not in MEAL and ingredient not in SIDE:
-        param = ""
-        dish_clause = ""
-        return param, dish_clause
-    for i in range(0, Ov0_len):
-        # determine which dish is relevant:
-        # TKTK what if multiple types of this overlay???
-        if ingredient not in relevant_overlays["Ov_0"][i]["overlay_action_space"]:
-            param1 = str(relevant_overlays["Ov_0"][i]["params"][0])
-            param2 = str(relevant_overlays["Ov_0"][i]["params"][1])
-            if (param1 == "oatmeal" or param2 == "oatmeal") and ingredient not in learning_util.ALL_OATMEAL_INGREDIENTS:
-                param = "oatmeal"
-                if param not in dish_clause:
-                    dish_clause += template["dish"].format("oatmeal")
-            elif (param1 == "cereal" or param2 == "cereal") and ingredient not in learning_util.CEREAL_INGREDIENTS:
-                param = "cereal"
-                if param not in dish_clause:
-                    dish_clause += template["dish"].format("cereal")
-            elif (param1 == "pastry" or param2 == "pastry") and ingredient not in learning_util.PASTRY_LIST:
-                param = "pastry"
-                if param not in dish_clause:
-                    dish_clause += template["dish"].format("pastry")
-    # If one dish was assigned: " oatmeal"
-    for i in range(0, Ov3_len):
-        param = str(relevant_overlays["Ov_3"][i]["params"][0])
-        if param not in dish_clause:
-            dish_clause += template["dish"].format(param)
-    for i in range(0, Ov5_len):
-        param = str(relevant_overlays["Ov_5"][i]["params"][0])
-        if param not in dish_clause:
-            dish_clause += template["dish"].format(param)
+# def get_non_dish_exp(relevant_overlays, template, ingredient):
+#     Ov0_len = len(relevant_overlays["Ov_0"])
+#     Ov3_len = len(relevant_overlays["Ov_3"])
+#     Ov5_len = len(relevant_overlays["Ov_5"])
+#     dish_clause = ""
+#     # make sure its a valid ingredient
+#     if ingredient not in INGREDIENTS and ingredient not in MEAL and ingredient not in SIDE:
+#         param = ""
+#         dish_clause = ""
+#         return param, dish_clause
+#     for i in range(0, Ov0_len):
+#         # determine which dish is relevant:
+#         # TKTK what if multiple types of this overlay???
+#         if ingredient not in relevant_overlays["Ov_0"][i]["overlay_action_space"]:
+#             param1 = str(relevant_overlays["Ov_0"][i]["params"][0])
+#             param2 = str(relevant_overlays["Ov_0"][i]["params"][1])
+#             if (param1 == "oatmeal" or param2 == "oatmeal") and ingredient not in learning_util.ALL_OATMEAL_INGREDIENTS:
+#                 param = "oatmeal"
+#                 if param not in dish_clause:
+#                     dish_clause += template["dish"].format("oatmeal")
+#             elif (param1 == "cereal" or param2 == "cereal") and ingredient not in learning_util.CEREAL_INGREDIENTS:
+#                 param = "cereal"
+#                 if param not in dish_clause:
+#                     dish_clause += template["dish"].format("cereal")
+#             elif (param1 == "pastry" or param2 == "pastry") and ingredient not in learning_util.PASTRY_LIST:
+#                 param = "pastry"
+#                 if param not in dish_clause:
+#                     dish_clause += template["dish"].format("pastry")
+#     # If one dish was assigned: " oatmeal"
+#     for i in range(0, Ov3_len):
+#         param = str(relevant_overlays["Ov_3"][i]["params"][0])
+#         if param not in dish_clause:
+#             dish_clause += template["dish"].format(param)
+#     for i in range(0, Ov5_len):
+#         param = str(relevant_overlays["Ov_5"][i]["params"][0])
+#         if param not in dish_clause:
+#             dish_clause += template["dish"].format(param)
 
-    # If no dish was assigned in overlays
-    if not dish_clause:
-        param = ""
-        dish_clause = ""
+#     # If no dish was assigned in overlays
+#     if not dish_clause:
+#         param = ""
+#         dish_clause = ""
       
     
-    return param, dish_clause
+#     return param, dish_clause
 
 
 if __name__ == '__main__':
