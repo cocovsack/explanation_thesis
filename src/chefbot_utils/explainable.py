@@ -759,13 +759,45 @@ def generate_explanations (action_seq, overlays):
 
     exp_json = json.load(open(os.path.join(config_dir, "explanation_template.json")))
 
-    template_all = exp_json["all"]
+    '''
+    Construct "no" explanation
+    '''
+
+    '''
+    Construct "statement of fact" explanation
+    '''
+
+    '''
+    Construct "propose alternative" explanation
+    '''
+
+    ''' 
+    Construct "mot important overlay" explanation
+    '''
+
+    '''
+    Construct "all overlays" explanation
+    '''
+    template_all = exp_json['all']
+    all_exp = template_all["beginning"]
     
     print(overlays)
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
     print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
     explanations["all"] = template_all["beginning"]
     print(explanations)
+    
+    template_all = all_exp 
+
+    '''
+    Construct "goal requirement" explanation
+    '''
+
+    '''
+    Construct "mathematical justification" explanation
+    '''
+
+  
     return True
 
 
