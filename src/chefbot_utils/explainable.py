@@ -809,17 +809,19 @@ def get_clauses(overlays):
     prohibitive_dishes = []
     prohibitive_ingredients = []
     for overlay in overlays:
+        o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
-        if overlay["overlay_type"] == "permit":
+        if o_type == "permit" or o_type == "transfer":
             for param in overlay["params"]:
                 if param in NUTRITIONAL:
                     permissive_adjectives.append(param)
                 elif param in DISHES:
+                    print("here")
                     permissive_dishes.append(param)
                 elif param in INGREDIENTS:
                     permissive_ingredients.append(param)
-        elif overlay["overlay_type"] == "prohibit":
+        elif o_type == "prohibit":
             for param in overlay["params"]:
                 if param in NUTRITIONAL:
                     prohibitive_adjectives.append(param)
