@@ -4,3 +4,6 @@ exp_venv/
 src/.DS_Store
 runs/
 src/chefbot_utils/explainability_trials/
+exp_venv1
+.DS_Store
+*/*/.DS_Store
