@@ -7,7 +7,7 @@ from rospy_message_converter import message_converter
 from rosprolog_client import PrologException, Prolog
 from chefbot.srv import PrologQuery, PrologQueryRequest, PrologQueryResponse
 from chefbot.srv import StateActionUpdate, StateActionUpdateRequest, StateActionUpdateResponse
-from chefbot_utils.learning_util import (ACTION_DICT, INGREDIENT_DICT,
+from chefbot_utils.learning_util import (ACTION_DICT, INGREDIENT_DICT, ALL_CPSC573_PREDS
                                              ALL_NUTRITIONAL_PREDS, ALL_MEAL_PREDS,
                                              ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS)
 
@@ -97,6 +97,9 @@ class PrologClassifier(object):
 
         self.init_state = True
         self.state_classifier = StateClassifier()
+
+        # import pdb
+        # pdb.set_trace()
         # self.kb = newModule("kb")
 
         # self.equiv_action = Functor("equiv_action", 2)
@@ -104,7 +107,7 @@ class PrologClassifier(object):
         # self.verbal = Functor("verbal")
         # These track the different action classifier rules.
         preds = set.union(*[ALL_NUTRITIONAL_PREDS, ALL_MEAL_PREDS,
-                            ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS])
+                            ALL_ACTION_TYPE_PREDS, ALL_PRECURSOR_PREDS, ALL_CPSC573_PREDS])
         self._action_classifier_dict = {p:("{}(X)".format(p), 1) for p in preds}
         self._action_classifier_dict['equiv_action'] = ("equiv_action({X},{Y})", 2)
         self._action_classifier_dict['do_only'] = ("do_only({X})", 1)
@@ -202,6 +205,8 @@ class PrologClassifier(object):
 
 
         """
+
+        print("INSIDE QUERY FUNCTION")
 
         query = self.p.query(q)
         ret_list = []
