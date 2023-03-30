@@ -780,14 +780,116 @@ def generate_explanations (action_seq, overlays):
     '''
     template_all = exp_json['all']
     all_exp = template_all["beginning"]
-    
-    print(overlays)
+
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
     print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
-    explanations["all"] = template_all["beginning"]
-    print(explanations)
     
-    template_all = all_exp 
+    something_permissive = False
+    # only permissive adjectives
+    if permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients == []:
+        something_permissive = True
+        all_exp += "something "
+        for i in range(0, len(permissive_adjectives) - 1): 
+            all_exp += permissive_adjectives[i] + " and "   
+        all_exp += permissive_adjectives[-1]
+    # only permissive dishes
+    if permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients == []:
+        something_permissive = True
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1]
+    # only permissive ingedients
+    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != []:
+        something_permissive = True
+        all_exp += "something using "
+        for i in range(0, len(permissive_ingredients) - 1): 
+            all_exp += permissive_ingredients[i] + " and "   
+        all_exp += permissive_ingredients[-1]
+    #permissive adjectives and permissive ingredients
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients == []:
+        something_permissive = True
+        if len(permissive_adjectives) > 2: 
+            all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
+        if len(permissive_adjectives) == 2:
+            all_exp = all_exp + permissive_adjectives[0]  + ' and ' + permissive_adjectives[1] + " "
+        if len(permissive_adjectives) == 1:
+            all_exp = all_exp + permissive_adjectives[0] + " "
+        
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1]
+    #permissive adjectives and permissive dishes
+    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != []:
+        something_permissive = True
+        all_exp += "something "
+        for i in range(0, len(permissive_adjectives) - 1): 
+            all_exp += permissive_adjectives[i] + " and "   
+        all_exp += permissive_adjectives[-1] + " using "
+        for i in range(0, len(permissive_ingredients) - 1): 
+            all_exp += permissive_ingredients[i] + " and " 
+        all_exp += permissive_ingredients[-1]
+    #permissive dishes and permissive ingredients
+    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != []:
+        something_permissive = True
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + " using "
+        for i in range(0, len(permissive_ingredients) - 1): 
+            all_exp += permissive_ingredients[i] + " and " 
+        all_exp += permissive_ingredients[-1]
+    #permissive dishes, adjectives, and ingredients
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != []:
+        something_permissive = True
+        if len(permissive_adjectives) > 2: 
+            all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
+        if len(permissive_adjectives) == 2:
+            all_exp = all_exp + permissive_adjectives[0]  + ' and ' + permissive_adjectives[1] + " "
+        if len(permissive_adjectives) == 1:
+            all_exp = all_exp + permissive_adjectives[0] + " "
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + ' using '
+        for i in range(0, len(permissive_ingredients) - 1): 
+            all_exp += permissive_ingredients[i] + " and " 
+        all_exp += permissive_ingredients[-1]
+
+    #only prohibitive adjectives
+    if prohibitive_adjectives != [] and prohibitive_dishes == [] and prohibitive_ingredients == []:
+        if something_permissive:
+            all_exp += " but also to make "
+        all_exp += "something not "
+        for i in range(0, len(prohibitive_adjectives) - 1): 
+            all_exp += prohibitive_adjectives[i] + " or "   
+        all_exp += prohibitive_adjectives[-1]
+    #only prohibitive dishes - not possible given current overlays
+    #only prohibitive ingredients
+    if prohibitive_adjectives == [] and prohibitive_dishes == [] and prohibitive_ingredients != []:
+        if something_permissive:
+            all_exp += " but also to not use "
+        else:
+            all_exp = all_exp[:-5] + "not use "
+        for i in range(0, len(prohibitive_ingredients) - 1): 
+            all_exp += prohibitive_ingredients[i] + " or "   
+        all_exp += prohibitive_ingredients[-1]
+    #prohibitive ingredients and prohibitive dishes - not possible given current overlays
+    #prohibitive adjectives and prohibitive dishes - not possible given current overlays
+    #prohibitve adjectives and prohibitive ingredients
+    if prohibitive_adjectives != [] and prohibitive_dishes == [] and prohibitive_ingredients != []:
+        if something_permissive:
+            all_exp += " but also to make "
+        all_exp += "something not "
+        for i in range(0, len(prohibitive_adjectives) - 1): 
+            all_exp += prohibitive_adjectives[i] + " or "   
+        all_exp += prohibitive_adjectives[-1]
+        all_exp += " while not using "
+        for i in range(0, len(prohibitive_ingredients) - 1): 
+            all_exp += prohibitive_ingredients[i] + " or "   
+        all_exp += prohibitive_ingredients[-1]
+    #prohibitive adjectives and prohibitive dishes and prohibitive ingredient - not possible given current overlays
+    
+    all_exp += "."
+    print("All overlays explanation:", all_exp)
+    explanations["all"] = all_exp
 
     '''
     Construct "goal requirement" explanation
