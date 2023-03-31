@@ -2,15 +2,10 @@
 	"all": {
 		"beginning": "You told me to make "
 	},
-<<<<<<< HEAD
 	"math": {
 		"beginning": "This action has a q-value of "
 	}, 
 	"none": {
 		"beginning": "I am "
-=======
-	"alternative": {
-		"beginning": "Given the constraint, we could also use "
->>>>>>> 70fd10eaedac065e3e6a449bb1c21e11ada31244
 	}
 }
