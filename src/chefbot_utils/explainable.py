@@ -711,6 +711,13 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
 
 
             print("Ep rewards: ", int_reward_dict)  
+            if True:
+                print("action: ", action)
+                step_cmd = input("query the robot: ").strip()
+                if step_cmd !="":
+                    #do something about explanation
+                    print("explanation...")
+                    input("press enter to continue")
 
         if save:
             save_model_path = "src/chefbot_utils/explainability_trials"
