@@ -549,7 +549,6 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
             overlay_permutations.append(list(el))
 
     for user_overlay in [overlay_permutations[-1]]:
-        # user_overlay = [user_overlay]
 
         gt_htn.reset()
         agent.reset()
@@ -715,9 +714,15 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
                 print("action: ", action)
                 step_cmd = input("query the robot: ").strip()
                 if step_cmd !="":
+                    query = Query()
+                    res = query.process_query(step_cmd)
+                    
                     #do something about explanation
-                    print("explanation...")
+                    print("Generating explanations:")
+                    generate_explanations(user_overlay, relevant_values)
                     input("press enter to continue")
+
+
 
         if save:
             save_model_path = "src/chefbot_utils/explainability_trials"
@@ -748,22 +753,10 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (action_seq, overlays, relevant_values):
-    # get the processed query
-    in_cmd = input("query the robot: ").strip()
-    query = Query()
-    res = query.process_query(in_cmd)
+def generate_explanations (overlays, relevant_values):
     explanations = {}
-
-    # create dictionaries to track the overlays
-    relevant_overlays = defaultdict(list)
-    say_transfer_overlays = defaultdict(list)
-    do_transfer_overlays = defaultdict(list)
-
-
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../config/")
-
+                                            "../../config/")
     exp_json = json.load(open(os.path.join(config_dir, "explanation_template.json")))
 
     '''
@@ -907,7 +900,7 @@ def generate_explanations (action_seq, overlays, relevant_values):
     '''
 
     template_math = exp_json['math']
-    math_exp = template_math["beginning"] + relevant_values[0] + "which is " relevant_values[1] higher than the next best action."
+    math_exp = template_math["beginning"] + str(relevant_values[0]) + " which is " + str(relevant_values[1]) + " higher than the next best action."
     print("Mathematical explation: ", math_exp)
   
     return True
@@ -1306,6 +1299,6 @@ if __name__ == '__main__':
     rng = np.random.default_rng(SEED)
     model_args = {"goal_condition": True} ## TKTK anything I need to add here?
     action_seq, overlays = model_run(overlay_input, rng, model_args, save=True)
-    print("BEGGINNING EXPLANATIONS of :", action_seq)
-    while True:
-        generate_explanations(action_seq, overlays)  
+    # print("BEGGINNING EXPLANATIONS of :", action_seq)
+    # while True:
+    #     generate_explanations(action_seq, overlays)  
