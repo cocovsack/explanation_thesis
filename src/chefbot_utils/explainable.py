@@ -56,7 +56,23 @@ MEAL = ['oatmeal', 'cereal']
 SIDE = ['pastry']
 DISHES = ['oatmeal', 'cereal', 'pastry']
 NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread"]
-
+ACTIONS = {
+    "gat": "gathering the {}",
+    "pou": "pouring the {}",
+    "pourw": "pouring the water in the {}",
+    "put": "putting the {} in the microwave",
+    "tur": "turning on the {}",
+    "coo": "cooking the oatmeal on the {}",
+    "col": "collecting the water in a {}",
+    "tak": "taking the {} out of the microwave",
+    # "gra": "grabbing",
+    "mix": "mixing in a {}",
+    "mic": "microwaving the {}",
+    "re": "reducing the heat of the {}",
+    "se": "serving the oatmeal in a {}",
+    # "co": "completing the meal",
+    "boi": "boiling the {} in liquid"
+}
 
 SHELF = ['top', 'bottom']
 DEST = ['pan', 'bowl', 'microwave']
@@ -719,7 +735,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
                     
                     #do something about explanation
                     print("Generating explanations:")
-                    generate_explanations(user_overlay, relevant_values)
+                    generate_explanations(user_overlay, relevant_values, int_reward_dict["actual_actions"])
                     input("press enter to continue")
 
 
@@ -753,7 +769,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (overlays, relevant_values):
+def generate_explanations (overlays, relevant_values, actions):
     explanations = {}
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                             "../../config/")
@@ -762,7 +778,34 @@ def generate_explanations (overlays, relevant_values):
     '''
     Construct "no" explanation
     '''
+    template_none = exp_json['none']
+    
+    flag = False
+    noun = ""
+    for char in actions[-1]:
+        if char == "(":
+            flag = True
+            continue
+        elif char == ":":
+            flag = False
+            break
+        if flag == True:
+            noun += char
 
+    print(noun)
+    
+    
+    if actions[-1][0:5] == "pourw":
+        verb = ACTIONS[actions[-1][0:5]]
+    else:
+        verb = ACTIONS[actions[-1][0:3]]
+
+    
+    none_exp = template_none["beginning"] + verb.format(noun) + "."
+    print(none_exp)
+    
+
+   
     '''
     Construct "statement of fact" explanation
     '''
@@ -772,7 +815,7 @@ def generate_explanations (overlays, relevant_values):
     '''
 
     ''' 
-    Construct "mot important overlay" explanation
+    Construct "most important overlay" explanation
     '''
 
     '''
