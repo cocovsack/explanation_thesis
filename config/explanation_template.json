@@ -1,5 +1,8 @@
 {
 	"all": {
 		"beginning": "You told me to make "
+	},
+	"alternative": {
+		"beginning": "Given the constraint, we could also use "
 	}
 }

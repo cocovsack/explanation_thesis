@@ -223,12 +223,14 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if nutr in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
-        elif template_key == 'Ov_2':
-            shelf = constraints
-            add_shelf_classifaction(learning_util.INGREDIENT_DICT)
-            for v in learning_util.INGREDIENT_DICT.keys():
-                if shelf in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
-                    action_space[v] = learning_util.INGREDIENT_DICT[v] 
+        # elif template_key == 'Ov_2':
+        #     shelf = constraints
+        #     add_shelf_classifaction(learning_util.INGREDIENT_DICT)
+        #     for v in learning_util.INGREDIENT_DICT.keys():
+        #         if shelf in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
+        #             # action_space[v] = learning_util.INGREDIENT_DICT[v] 
+        #             if v in list(action_space):
+        #                 del action_space[v]
         elif template_key == 'Ov_3' or template_key == 'Ov_4':
             dish = constraints
             if dish == "oatmeal":
@@ -244,8 +246,10 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if no_nutr not in learning_util.INGREDIENT_DICT[v] and "{}_precursor".format(no_nutr) not in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
+        
         print(action_space)
         return action_space
+
 
     def _command_to_rule(self, template_key, var, command):
 
@@ -770,6 +774,13 @@ def generate_explanations (action_seq, overlays):
     '''
     Construct "propose alternative" explanation
     '''
+    template_alt = exp_json['alternative']
+    alternative_exp = template_alt["beginning"]
+
+    for overlay in overlays:
+        print("action space keys:", list(overlay['overlay_action_space']))
+
+
 
     ''' 
     Construct "mot important overlay" explanation
