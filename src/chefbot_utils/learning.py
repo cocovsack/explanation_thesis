@@ -481,7 +481,7 @@ class DQNAgent(object):
         sorted_actions = sorted(sorted_actions, reverse=True, key=lambda x: x[1])
         print("[act] TOP 3 actions: ")
         for a, p in sorted_actions[:10]:
-                print("\t{}: {}".format(a, np.round(p, 7)))
+            print("\t{}: {}".format(a, np.round(p, 7)))
 
         if ret_original_pred:
             # assert not self.overlays is None
@@ -494,7 +494,12 @@ class DQNAgent(object):
 
         # self._action_hist.append(action)
 
-        return ret
+        best_score = np.round(sorted_actions[0][1], 7)
+        second_score = np.round(sorted_actions[1][1], 7)
+
+        relevant_values = [best_score, best_score - second_score]
+
+        return action, orig_action, relevant_values
 
 
     def weighted_action_selection(self, action_probs):

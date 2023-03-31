@@ -553,7 +553,6 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
             overlay_permutations.append(list(el))
 
     for user_overlay in [overlay_permutations[-1]]:
-        # user_overlay = [user_overlay]
 
         gt_htn.reset()
         agent.reset()
@@ -594,7 +593,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
             print("\n\n#########STEP {}#########".format(step))
             # Get action predictions
             print("Remaining corrective actions action: ", corrective_actions)
-            pred_action, pred_action_no_ov = agent.act(state, possible_actions, ret_original_pred=True)
+            pred_action, pred_action_no_ov, relevant_values = agent.act(state, possible_actions, ret_original_pred=True)
             print("[compare_agents] pred action: ", pred_action, pred_action_no_ov)
 
             # Get queued corrective actions if they exist
@@ -715,6 +714,19 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
 
 
             print("Ep rewards: ", int_reward_dict)  
+            if True:
+                print("action: ", action)
+                step_cmd = input("query the robot: ").strip()
+                if step_cmd !="":
+                    query = Query()
+                    res = query.process_query(step_cmd)
+                    
+                    #do something about explanation
+                    print("Generating explanations:")
+                    generate_explanations(user_overlay, relevant_values)
+                    input("press enter to continue")
+
+
 
         if save:
             save_model_path = "src/chefbot_utils/explainability_trials"
@@ -745,22 +757,10 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (action_seq, overlays):
-    # get the processed query
-    in_cmd = input("query the robot: ").strip()
-    query = Query()
-    res = query.process_query(in_cmd)
+def generate_explanations (overlays, relevant_values):
     explanations = {}
-
-    # create dictionaries to track the overlays
-    relevant_overlays = defaultdict(list)
-    say_transfer_overlays = defaultdict(list)
-    do_transfer_overlays = defaultdict(list)
-
-
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../config/")
-
+                                            "../../config/")
     exp_json = json.load(open(os.path.join(config_dir, "explanation_template.json")))
 
     '''
@@ -910,6 +910,9 @@ def generate_explanations (action_seq, overlays):
     Construct "mathematical justification" explanation
     '''
 
+    template_math = exp_json['math']
+    math_exp = template_math["beginning"] + str(relevant_values[0]) + " which is " + str(relevant_values[1]) + " higher than the next best action."
+    print("Mathematical explation: ", math_exp)
   
     return True
 
@@ -1307,6 +1310,6 @@ if __name__ == '__main__':
     rng = np.random.default_rng(SEED)
     model_args = {"goal_condition": True} ## TKTK anything I need to add here?
     action_seq, overlays = model_run(overlay_input, rng, model_args, save=True)
-    print("BEGGINNING EXPLANATIONS of :", action_seq)
-    while True:
-        generate_explanations(action_seq, overlays)  
+    # print("BEGGINNING EXPLANATIONS of :", action_seq)
+    # while True:
+    #     generate_explanations(action_seq, overlays)  
