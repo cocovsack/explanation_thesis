@@ -590,7 +590,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
             print("\n\n#########STEP {}#########".format(step))
             # Get action predictions
             print("Remaining corrective actions action: ", corrective_actions)
-            pred_action, pred_action_no_ov = agent.act(state, possible_actions, ret_original_pred=True)
+            pred_action, pred_action_no_ov, relevant_values = agent.act(state, possible_actions, ret_original_pred=True)
             print("[compare_agents] pred action: ", pred_action, pred_action_no_ov)
 
             # Get queued corrective actions if they exist
@@ -741,7 +741,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (action_seq, overlays):
+def generate_explanations (action_seq, overlays, relevant_values):
     # get the processed query
     in_cmd = input("query the robot: ").strip()
     query = Query()
@@ -899,6 +899,9 @@ def generate_explanations (action_seq, overlays):
     Construct "mathematical justification" explanation
     '''
 
+    template_math = exp_json['math']
+    math_exp = template_math["beginning"] + relevant_values[0] + "which is " relevant_values[1] higher than the next best action."
+    print("Mathematical explation: ", math_exp)
   
     return True
 
