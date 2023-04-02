@@ -7,5 +7,8 @@
 	}, 
 	"none": {
 		"beginning": "I am "
+	},
+	"alternative": {
+		"beginning": "Given the constraints, we could also use "
 	}
 }
