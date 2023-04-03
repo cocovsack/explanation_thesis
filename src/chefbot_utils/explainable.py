@@ -277,6 +277,7 @@ class ProcessCommand(object):
                 k = num
 
         #  PERMIT
+        extra_params = ""
         if template_key == 'Ov_0':
             m1, m2 = var
             first_pred = "making_{dish1}(A_out) and state(no_completed_dish)".format(dish1=m1)
@@ -345,7 +346,8 @@ class ProcessCommand(object):
         elif template_key == 'Ov_10':
 
             ingredient = var
-            constraints = [ingredient, "allergenic"]
+            constraints = ingredient
+            extra_params = "allergenic"
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -359,7 +361,8 @@ class ProcessCommand(object):
             action_space = self._get_action_space(constraints, template_key, type)
         elif template_key == 'Ov_12':
             ingredient = var
-            constraints = [ingredient, "forbidden by authority"]
+            constraints = ingredient
+            extra_params = "forbidden by authority"
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -367,7 +370,7 @@ class ProcessCommand(object):
         else:
             rules = ["foo"]
         
-        return rules, action_space, constraints
+        return rules, action_space, constraints, extra_params
 
     def _rule_from_command(self, command):
         overlay_score_dict = {}
@@ -410,13 +413,13 @@ class ProcessCommand(object):
         print("best action key: {} and cmd: {} score: {}".format(best_act_key, best_est_act_command,
             act_score))
             
-        ov_rules, action_space, params = self._command_to_rule(best_ov_key, ov_var, best_est_ov_command)
+        ov_rules, action_space, params, extra_params = self._command_to_rule(best_ov_key, ov_var, best_est_ov_command)
         # Get overlay type (eg.g PERMIT, PROHIBIT, TRANSFER, REMOVE) associated with the best
         # scoring overlay
         ov_type = self.overlay_template_dict[best_ov_key][1]
 
-        ov_res_dict = {"key": best_ov_key, "rules": ov_rules, "score": ov_score, "params": params,
-                        "type": "overlay", "overlay_type": ov_type, "overlay_action_space": action_space}
+        ov_res_dict = {"key": best_ov_key, "rules": ov_rules, "score": ov_score, "extra_params": extra_params,
+                        "type": "overlay", "overlay_type": ov_type, "params": ov_var, "overlay_action_space": action_space}
         act_res_dict = {"key": best_act_key, "action_param_dict":act_var, "score":act_score,
                             "type":"action"}
         # return the result dictionary with the highest score.
@@ -826,7 +829,7 @@ def generate_explanations (overlays, relevant_values, actions):
     
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(relevant_overlays)
 
-    fact_exp += noun.format() + " is used to make "
+    fact_exp += noun.capitalize() + " is used to make "
 
     for i in range(0, len(permissive_adjectives)): 
         if i == 0:
@@ -850,13 +853,15 @@ def generate_explanations (overlays, relevant_values, actions):
         else:
             fact_exp += "and" + permissive_ingredients[i]
 
+    import pdb
+    pdb.set_trace()
     for i in range(0, len(prohibitive_adjectives)): 
         if i == 0:
             fact_exp += " that is not " + prohibitive_adjectives[i]
         else:
             fact_exp += "or" + prohibitive_adjectives[i]            
     pdb.set_trace
-    print(fact_exp)
+    print("Statement of fact explanation: " + fact_exp)
 
 
     '''
@@ -1043,6 +1048,10 @@ def get_clauses(overlays):
         o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
+        import pdb
+        pdb.set_trace()
+        if overlay["extra_params"] not in overlay["params"]:
+            overlay["params"].append(overlay["extra_params"])
         if o_type == "permit" or o_type == "transfer":
             for param in overlay["params"]:
                 if param in NUTRITIONAL:
