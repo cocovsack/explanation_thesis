@@ -55,7 +55,7 @@ INGREDIENTS = ['oats', 'milk', 'measuring cup', 'strawberry', 'blueberry', 'bana
 MEAL = ['oatmeal', 'cereal']
 SIDE = ['pastry']
 DISHES = ['oatmeal', 'cereal', 'pastry']
-NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread"]
+NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread", "allergenic", "forbidden by authority"]
 ACTIONS = {
     "gat": "gathering the {}",
     "pou": "pouring the {}",
@@ -262,7 +262,6 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if no_nutr not in learning_util.INGREDIENT_DICT[v] and "{}_precursor".format(no_nutr) not in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
-        
         print(action_space)
         return action_space
 
@@ -344,8 +343,9 @@ class ProcessCommand(object):
             type = 'prohibit'
             action_space = self._get_action_space(constraints, template_key, type)
         elif template_key == 'Ov_10':
+
             ingredient = var
-            constraints = ingredient
+            constraints = [ingredient, "allergenic"]
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -359,7 +359,7 @@ class ProcessCommand(object):
             action_space = self._get_action_space(constraints, template_key, type)
         elif template_key == 'Ov_12':
             ingredient = var
-            constraints = [ingredient, "authority"]
+            constraints = [ingredient, "forbidden by authority"]
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -416,7 +416,7 @@ class ProcessCommand(object):
         ov_type = self.overlay_template_dict[best_ov_key][1]
 
         ov_res_dict = {"key": best_ov_key, "rules": ov_rules, "score": ov_score, "params": params,
-                        "type": "overlay", "overlay_type": ov_type, "params": ov_var, "overlay_action_space": action_space}
+                        "type": "overlay", "overlay_type": ov_type, "overlay_action_space": action_space}
         act_res_dict = {"key": best_act_key, "action_param_dict":act_var, "score":act_score,
                             "type":"action"}
         # return the result dictionary with the highest score.
@@ -826,7 +826,7 @@ def generate_explanations (overlays, relevant_values, actions):
     
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(relevant_overlays)
 
-    fact_exp += noun + " is used to make "
+    fact_exp += noun.format() + " is used to make "
 
     for i in range(0, len(permissive_adjectives)): 
         if i == 0:
@@ -849,7 +849,12 @@ def generate_explanations (overlays, relevant_values, actions):
             fact_exp += " with {}". format(permissive_ingredients[i])
         else:
             fact_exp += "and" + permissive_ingredients[i]
-            
+
+    for i in range(0, len(prohibitive_adjectives)): 
+        if i == 0:
+            fact_exp += " that is not " + prohibitive_adjectives[i]
+        else:
+            fact_exp += "or" + prohibitive_adjectives[i]            
     pdb.set_trace
     print(fact_exp)
 
