@@ -811,6 +811,12 @@ def generate_explanations (overlays, relevant_values, actions):
    
     '''
     Construct "statement of fact" explanation
+    Gather the blueberries
+    Lets make something healthy
+    # You make the pastry
+    Blueberry is used to make healthy oatmeal 
+
+    Mix the bowl
     '''
     relevant_overlays = []
     fact_exp = ""
@@ -820,21 +826,14 @@ def generate_explanations (overlays, relevant_values, actions):
     
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(relevant_overlays)
 
-
     fact_exp += noun + " is used to make "
-    # import pdb
-    # pdb.set_trace()
+
     for i in range(0, len(permissive_adjectives)): 
         if i == 0:
             fact_exp += permissive_adjectives[i]
         else:
             fact_exp += "and" + permissive_adjectives[i]
     
-    for i in range(0, len(permissive_ingredients)): 
-        if i == 0:
-            fact_exp += " with {}". format(permissive_ingredients[i])
-        else:
-            fact_exp += "and" + permissive_ingredients[i]
 
     if not permissive_dishes:
         fact_exp += " breakfast"
@@ -844,8 +843,16 @@ def generate_explanations (overlays, relevant_values, actions):
                 fact_exp += " " + permissive_dishes[i]
             else:
                 fact_exp += "and" + permissive_dishes[i]
+    
+    for i in range(0, len(permissive_ingredients)): 
+        if i == 0:
+            fact_exp += " with {}". format(permissive_ingredients[i])
+        else:
+            fact_exp += "and" + permissive_ingredients[i]
+            
     pdb.set_trace
     print(fact_exp)
+
 
     '''
     Construct "propose alternative" explanation
