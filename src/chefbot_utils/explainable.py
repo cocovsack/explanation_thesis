@@ -806,7 +806,7 @@ def generate_explanations (overlays, relevant_values, actions):
 
     
     none_exp = template_none["beginning"] + verb.format(noun) + "."
-    print(none_exp)
+    print("No explanation:", none_exp)
 
    
     '''
@@ -857,13 +857,40 @@ def generate_explanations (overlays, relevant_values, actions):
     '''
     Construct "propose alternative" explanation
     '''
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
     template_alt = exp_json['alternative']
     alternative_exp = template_alt["beginning"]
 
+    overlay_keys = []
     for overlay in overlays:
-        print("action space keys:", list(overlay['overlay_action_space']))
+        overlay_keys.append(list(overlay['overlay_action_space']))
 
+    intersection = overlay_keys[0]
+    for keys in overlay_keys[1:]:
+        intersection = [value for value in keys if value in intersection]
 
+    alternatives = []
+    for item in intersection:
+        ingredients = learning_util.INGREDIENT_DICT[item]
+        for adj in permissive_adjectives:
+            if adj in ingredients and item not in alternatives:
+                alternatives.append(item)
+        for dish in permissive_dishes:
+            if dish in ingredients and item not in alternatives:
+                alternatives.append(item)
+        for ing in permissive_ingredients:
+            if ing in ingredients and item not in alternatives:
+                alternatives.append(item)
+
+    if len(alternatives) == 0:
+        alternative_exp = "There are no alternatives available."
+    else:
+        for i in range(0,len(alternatives)-1):
+            alternative_exp += alternatives[i] + " or "
+        alternative_exp += alternatives[-1]
+
+        alternative_exp += "."
+    print('Alternative exp:', alternative_exp)
 
     ''' 
     Construct "most important overlay" explanation
