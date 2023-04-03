@@ -262,7 +262,19 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if no_nutr not in learning_util.INGREDIENT_DICT[v] and "{}_precursor".format(no_nutr) not in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
-        print(action_space)
+        elif template_key == 'Ov_10':
+            no_ingred = constraints
+            for v in INGREDIENTS:
+                if v != no_ingred:
+                    action_space[v] = learning_util.INGREDIENT_DICT[v]
+        elif template_key == 'Ov_11':
+            ingred = constraints
+            action_space[ingred] = learning_util.INGREDIENT_DICT[ingred]
+        elif template_key == 'Ov_12':
+            no_ingred = constraints
+            for v in INGREDIENTS:
+                if v != no_ingred:
+                    action_space[v] = learning_util.INGREDIENT_DICT[v]
         return action_space
 
 
@@ -871,13 +883,51 @@ def generate_explanations (overlays, relevant_values, actions):
     template_alt = exp_json['alternative']
     alternative_exp = template_alt["beginning"]
 
+    target = noun
+    print("Target is", noun)
+    target_ingr_list = learning_util.INGREDIENT_DICT[target]
+    possible_alternatives = []
+    if "topping" in target_ingr_list:
+        print("Target is a topping")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "topping" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if 'object' in target_ingr_list:
+        print("Target is a object")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "object" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if 'making_oatmeal' in target_ingr_list:
+        print("Target is a making oatmeal")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "making_oatmeal" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if "making_pastry" in target_ingr_list:
+        print("Target is a making pastry")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "making_pastry" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+
     overlay_keys = []
     for overlay in overlays:
         overlay_keys.append(list(overlay['overlay_action_space']))
 
+    print("overlay keys", overlay_keys)
+
     intersection = overlay_keys[0]
     for keys in overlay_keys[1:]:
         intersection = [value for value in keys if value in intersection]
+
+    print("intersection from overlays is", intersection)
+    print("possible alternatives is ", possible_alternatives)
+
+    intersection = [value for value in intersection if value in possible_alternatives]
+
+    print("intersection is", intersection)
 
     alternatives = []
     for item in intersection:
