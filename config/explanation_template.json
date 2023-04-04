@@ -1,5 +1,14 @@
 {
 	"all": {
 		"beginning": "You told me to make "
+	},
+	"math": {
+		"beginning": "This action has a q-value of "
+	}, 
+	"none": {
+		"beginning": "I am "
+	},
+	"alternative": {
+		"beginning": "Given the constraints, we could also use "
 	}
 }

@@ -57,8 +57,24 @@ INGREDIENTS = ['oats', 'milk', 'measuring cup', 'strawberry', 'blueberry', 'bana
 MEAL = ['oatmeal', 'cereal']
 SIDE = ['pastry']
 DISHES = ['oatmeal', 'cereal', 'pastry']
-NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread"]
-
+NUTRITIONAL = ["fruity", "quick", "sweet", "gluten", "sodium", "protein", "nonvegan", "dairy", "healthy", "bread", "allergenic", "forbidden by authority"]
+ACTIONS = {
+    "gat": "gathering the {}",
+    "pou": "pouring the {}",
+    "pourw": "pouring the water in the {}",
+    "put": "putting the {} in the microwave",
+    "tur": "turning on the {}",
+    "coo": "cooking the oatmeal on the {}",
+    "col": "collecting the water in a {}",
+    "tak": "taking the {} out of the microwave",
+    # "gra": "grabbing",
+    "mix": "mixing in a {}",
+    "mic": "microwaving the {}",
+    "re": "reducing the heat of the {}",
+    "se": "serving the oatmeal in a {}",
+    # "co": "completing the meal",
+    "boi": "boiling the {} in liquid"
+}
 
 SHELF = ['top', 'bottom']
 DEST = ['pan', 'bowl', 'microwave']
@@ -225,12 +241,14 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if nutr in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
-        elif template_key == 'Ov_2':
-            shelf = constraints
-            add_shelf_classifaction(learning_util.INGREDIENT_DICT)
-            for v in learning_util.INGREDIENT_DICT.keys():
-                if shelf in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
-                    action_space[v] = learning_util.INGREDIENT_DICT[v] 
+        # elif template_key == 'Ov_2':
+        #     shelf = constraints
+        #     add_shelf_classifaction(learning_util.INGREDIENT_DICT)
+        #     for v in learning_util.INGREDIENT_DICT.keys():
+        #         if shelf in learning_util.INGREDIENT_DICT[v] or "{}_precursor".format(nutr) in learning_util.INGREDIENT_DICT[v]:
+        #             # action_space[v] = learning_util.INGREDIENT_DICT[v] 
+        #             if v in list(action_space):
+        #                 del action_space[v]
         elif template_key == 'Ov_3' or template_key == 'Ov_4':
             dish = constraints
             if dish == "oatmeal":
@@ -246,8 +264,21 @@ class ProcessCommand(object):
             for v in learning_util.INGREDIENT_DICT.keys():
                 if no_nutr not in learning_util.INGREDIENT_DICT[v] and "{}_precursor".format(no_nutr) not in learning_util.INGREDIENT_DICT[v]:
                     action_space[v] = learning_util.INGREDIENT_DICT[v]
-        print(action_space)
+        elif template_key == 'Ov_10':
+            no_ingred = constraints
+            for v in INGREDIENTS:
+                if v != no_ingred:
+                    action_space[v] = learning_util.INGREDIENT_DICT[v]
+        elif template_key == 'Ov_11':
+            ingred = constraints
+            action_space[ingred] = learning_util.INGREDIENT_DICT[ingred]
+        elif template_key == 'Ov_12':
+            no_ingred = constraints
+            for v in INGREDIENTS:
+                if v != no_ingred:
+                    action_space[v] = learning_util.INGREDIENT_DICT[v]
         return action_space
+
 
     def _command_to_rule(self, template_key, var, command):
 
@@ -260,6 +291,7 @@ class ProcessCommand(object):
                 k = num
 
         #  PERMIT
+        extra_params = ""
         if template_key == 'Ov_0':
             m1, m2 = var
             first_pred = "making_{dish1}(A_out) and state(no_completed_dish)".format(dish1=m1)
@@ -326,8 +358,10 @@ class ProcessCommand(object):
             type = 'prohibit'
             action_space = self._get_action_space(constraints, template_key, type)
         elif template_key == 'Ov_10':
+
             ingredient = var
             constraints = ingredient
+            extra_params = "allergenic"
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -341,7 +375,8 @@ class ProcessCommand(object):
             action_space = self._get_action_space(constraints, template_key, type)
         elif template_key == 'Ov_12':
             ingredient = var
-            constraints = [ingredient, "authority"]
+            constraints = ingredient
+            extra_params = "forbidden by authority"
             rules = ["not state(two_completed_dish) then not has_{ingred}(A_out)".format(ingred=ingredient)]
             type = 'prohibit'
             #TK TK check the action space and rules
@@ -349,7 +384,7 @@ class ProcessCommand(object):
         else:
             rules = ["foo"]
         
-        return rules, action_space, constraints
+        return rules, action_space, constraints, extra_params
 
     def _rule_from_command(self, command):
         overlay_score_dict = {}
@@ -392,12 +427,12 @@ class ProcessCommand(object):
         print("best action key: {} and cmd: {} score: {}".format(best_act_key, best_est_act_command,
             act_score))
             
-        ov_rules, action_space, params = self._command_to_rule(best_ov_key, ov_var, best_est_ov_command)
+        ov_rules, action_space, params, extra_params = self._command_to_rule(best_ov_key, ov_var, best_est_ov_command)
         # Get overlay type (eg.g PERMIT, PROHIBIT, TRANSFER, REMOVE) associated with the best
         # scoring overlay
         ov_type = self.overlay_template_dict[best_ov_key][1]
 
-        ov_res_dict = {"key": best_ov_key, "rules": ov_rules, "score": ov_score, "params": params,
+        ov_res_dict = {"key": best_ov_key, "rules": ov_rules, "score": ov_score, "extra_params": extra_params,
                         "type": "overlay", "overlay_type": ov_type, "params": ov_var, "overlay_action_space": action_space}
         act_res_dict = {"key": best_act_key, "action_param_dict":act_var, "score":act_score,
                             "type":"action"}
@@ -736,7 +771,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
                     
                     #do something about explanation
                     print("Generating explanations:")
-                    generate_explanations(user_overlay, relevant_values)
+                    generate_explanations(user_overlay, relevant_values, int_reward_dict["actual_actions"])
                     input("press enter to continue")
 
 
@@ -770,7 +805,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (overlays, relevant_values):
+def generate_explanations (overlays, relevant_values, actions):
     explanations = {}
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                             "../../config/")
@@ -779,17 +814,163 @@ def generate_explanations (overlays, relevant_values):
     '''
     Construct "no" explanation
     '''
+    template_none = exp_json['none']
+    
+    flag = False
 
+    # get the noun 
+    noun = ""
+    for char in actions[-1]:
+        if char == "(":
+            flag = True
+            continue
+        elif char == ":":
+            flag = False
+            break
+        if flag == True:
+            noun += char  
+
+    # get the verb
+    if actions[-1][0:5] == "pourw":
+        verb = ACTIONS[actions[-1][0:5]]
+    else:
+        verb = ACTIONS[actions[-1][0:3]]
+
+    
+    none_exp = template_none["beginning"] + verb.format(noun) + "."
+    print("No explanation:", none_exp)
+
+   
     '''
     Construct "statement of fact" explanation
+    Gather the blueberries
+    Lets make something healthy
+    # You make the pastry
+    Blueberry is used to make healthy oatmeal 
+
+    Mix the bowl
     '''
+    relevant_overlays = []
+    fact_exp = ""
+    for overlay in overlays:
+        if noun in overlay['overlay_action_space']:
+            relevant_overlays.append(overlay)
+    
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(relevant_overlays)
+
+    fact_exp += noun.capitalize() + " is used to make "
+
+    for i in range(0, len(permissive_adjectives)): 
+        if i == 0:
+            fact_exp += permissive_adjectives[i]
+        else:
+            fact_exp += "and" + permissive_adjectives[i]
+    
+
+    if not permissive_dishes:
+        fact_exp += " breakfast"
+    else:
+        for i in range(0, len(permissive_dishes)): 
+            if i == 0:
+                fact_exp += " " + permissive_dishes[i]
+            else:
+                fact_exp += "and" + permissive_dishes[i]
+    
+    for i in range(0, len(permissive_ingredients)): 
+        if i == 0:
+            fact_exp += " with {}". format(permissive_ingredients[i])
+        else:
+            fact_exp += "and" + permissive_ingredients[i]
+
+    import pdb
+    pdb.set_trace()
+    for i in range(0, len(prohibitive_adjectives)): 
+        if i == 0:
+            fact_exp += " that is not " + prohibitive_adjectives[i]
+        else:
+            fact_exp += "or" + prohibitive_adjectives[i]            
+    pdb.set_trace
+    print("Statement of fact explanation: " + fact_exp)
+
 
     '''
     Construct "propose alternative" explanation
     '''
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    template_alt = exp_json['alternative']
+    alternative_exp = template_alt["beginning"]
+
+    target = noun
+    print("Target is", noun)
+    target_ingr_list = learning_util.INGREDIENT_DICT[target]
+    possible_alternatives = []
+    if "topping" in target_ingr_list:
+        print("Target is a topping")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "topping" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if 'object' in target_ingr_list:
+        print("Target is a object")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "object" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if 'making_oatmeal' in target_ingr_list:
+        print("Target is a making oatmeal")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "making_oatmeal" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+    if "making_pastry" in target_ingr_list:
+        print("Target is a making pastry")
+        for ingr in INGREDIENTS:
+            ingr_list = learning_util.INGREDIENT_DICT[ingr]
+            if "making_pastry" in ingr_list and ingr != target:
+                possible_alternatives.append(ingr)
+
+    overlay_keys = []
+    for overlay in overlays:
+        overlay_keys.append(list(overlay['overlay_action_space']))
+
+    print("overlay keys", overlay_keys)
+
+    intersection = overlay_keys[0]
+    for keys in overlay_keys[1:]:
+        intersection = [value for value in keys if value in intersection]
+
+    print("intersection from overlays is", intersection)
+    print("possible alternatives is ", possible_alternatives)
+
+    intersection = [value for value in intersection if value in possible_alternatives]
+
+    print("intersection is", intersection)
+
+    alternatives = []
+    for item in intersection:
+        ingredients = learning_util.INGREDIENT_DICT[item]
+        for adj in permissive_adjectives:
+            if adj in ingredients and item not in alternatives:
+                alternatives.append(item)
+        for dish in permissive_dishes:
+            if dish in ingredients and item not in alternatives:
+                alternatives.append(item)
+        for ing in permissive_ingredients:
+            if ing in ingredients and item not in alternatives:
+                alternatives.append(item)
+
+    if len(alternatives) == 0:
+        alternative_exp = "There are no alternatives available."
+    else:
+        for i in range(0,len(alternatives)-1):
+            alternative_exp += alternatives[i] + " or "
+        alternative_exp += alternatives[-1]
+
+        alternative_exp += "."
+    print('Alternative exp:', alternative_exp)
 
     ''' 
-    Construct "mot important overlay" explanation
+    Construct "most important overlay" explanation
     '''
 
     '''
@@ -934,6 +1115,10 @@ def get_clauses(overlays):
         o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
+        import pdb
+        pdb.set_trace()
+        if overlay["extra_params"] not in overlay["params"]:
+            overlay["params"].append(overlay["extra_params"])
         if o_type == "permit" or o_type == "transfer":
             for param in overlay["params"]:
                 if param in NUTRITIONAL:

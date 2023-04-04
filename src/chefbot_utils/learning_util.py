@@ -65,7 +65,7 @@ ALL_PRECURSOR_PREDS = set(["{}_precursor".format(n) for n in ALL_NUTRITIONAL_PRE
 PRECURSOR_PREDS_NO_DAIRY = set(["{}_precursor".format(n) for n in NUTRITIONAL_PREDS_NO_DAIRY])
 
 INGREDIENT_DICT = defaultdict(set, {'oats': set(['has_oats', 'making_oatmeal', "main_precursor"]).union(ALL_PRECURSOR_PREDS),
-                                    'bowl' :set(['making_oatmeal', 'making_cereal', 'quick']).union(ALL_PRECURSOR_PREDS),
+                                    'bowl' :set(['making_oatmeal', 'making_cereal', 'quick', 'object']).union(ALL_PRECURSOR_PREDS),
                                     'water': set(['has_water', 'making_oatmeal']).union(PRECURSOR_PREDS_NO_DAIRY),
                                     'salt' : set(['has_salt', 'making_oatmeal', 'sodium']).union(ALL_PRECURSOR_PREDS),
                                     'mixingspoon': set(['making_oatmeal', 'object', 'quick']).union(ALL_PRECURSOR_PREDS),
