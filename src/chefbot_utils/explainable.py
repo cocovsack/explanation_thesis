@@ -27,6 +27,8 @@ from overlay import Overlay, OverlayList, PrologOverlay, PrologOverlayList, Over
 from sim_eval import InteractionGenerator, undo_incorrect_pastry_action, same_action_diff_intervention_type
 from state_transformer import add_shelf_classifaction
 
+import pdb
+
 SEED = 1000
 N_MEALS = 1
 SPLIT = 0
@@ -511,7 +513,22 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     # get the test meal
     # TKTK, use ingredients first... the way gt_htn is constructed? should i allow for more user input
     training_htns, testing_htns = learning_util.generate_train_test_meals(rng, N_MEALS, SPLIT)
-    gt_htn = CookingHTNFactory(testing_htns[0]["main"], testing_htns[0]["side"], testing_htns[0]["liquid"], testing_htns[0]["action_types"], testing_htns[0]["order"])._generate_meal("use immediately")
+    gt_htn = CookingHTNFactory(testing_htns[0]["main"], testing_htns[0]["side"], testing_htns[0]["liquid"], testing_htns[0]["action_types"], "main first")._generate_meal("ingredients first")
+    print("train "+str(len(training_htns))+" test "+str(len(testing_htns)))
+    #pdb.set_trace()
+    
+    ### debugging
+    '''debug_path = "src/chefbot_utils/debugging"
+    if not os.path.exists(debug_path):
+        os.makedirs(debug_path)
+
+    debug_file = os.path.join(debug_path,
+                             "htn.json")
+    print("Saving {}...".format(debug_file))
+    with open(debug_file, 'w') as outfile:
+        htn_str = json.dumps(gt_htn)
+        json.dumps(htn_str, outfile)
+    '''
 
     model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "../../model_files/")
