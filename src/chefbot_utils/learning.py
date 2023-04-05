@@ -25,6 +25,7 @@ except ModuleNotFoundError:
         from chefbot_utils.overlay import OverlayList, PrologOverlayList, PrologOverlay, RosOverlayList
         from chefbot_utils.pddl_util import CHECK_TEMPLATE_DICT
 
+import pdb
 
 # TensorBoard
 # try:
@@ -500,6 +501,73 @@ class DQNAgent(object):
         relevant_values = [best_score, best_score - second_score]
 
         return action, orig_action, relevant_values
+    
+    def compare_act(self, state, action_comp, feasible_actions=None, ret_original_pred=False):
+        # Action not feasible if not in action space. This can
+        # happen if an unusual PDDL action grounding is used.
+        # feasible_actions = [a for a in feasible_actions if a in self.action_space]
+        feasible_actions = [a for a in feasible_actions if a in self.action_space]
+        try:
+                action_prob = self._get_policy_dist(state, feasible_actions).squeeze()
+                orig_action_prob = deepcopy(action_prob)
+        except AttributeError as e:
+                print("[act] ", e)
+                print("[act] Error!! Cannot get action probabilities!")
+                import pdb; pdb.set_trace()
+
+        if not self.overlays is None:
+            print("[act] Applying overlays!")
+            print(self.overlays)
+            #import pdb
+            #pdb.set_trace()
+            action_prob, _ = self.apply_overlays(state,
+                                                 feasible_actions,
+                                                 action_prob)
+
+        # Normalize again
+        action_prob = softmax(action_prob)
+
+        # Get the best action
+        a_idx = np.argmax(action_prob)
+        action = self.action_space[a_idx.item()]
+        # action = np.random.choice(list(self.action_space),
+        #                           p=np.squeeze(action_prob))
+        # self.softmax_action_selection(q_vals, self.action_space)
+
+        # print("[act] Choosing Q action!")
+        sorted_actions = zip(self.action_space,
+                             action_prob[:])
+        sorted_actions = sorted(sorted_actions, reverse=True, key=lambda x: x[1])
+        print("[act] TOP 3 actions: ")
+        for a, p in sorted_actions[:10]:
+            print("\t{}: {}".format(a, np.round(p, 7)))
+
+        if ret_original_pred:
+            # assert not self.overlays is None
+            orig_a_idx = np.argmax(orig_action_prob)
+            orig_action = self.action_space[orig_a_idx]
+            ret = action, orig_action
+        else:
+            ret = action
+        # action = self.softmax_action_selection(q_vals, self.action_space)
+
+        # self._action_hist.append(action)
+
+        best_score = np.round(sorted_actions[0][1], 7)
+        second_score = np.round(sorted_actions[1][1], 7)
+
+        relevant_values = [best_score, best_score - second_score]
+        
+        same_act = action_comp == sorted_actions[0][0]
+        act_value = -1
+        action_idx = 0
+        while act_value == -1:
+            if sorted_actions[action_idx][0] == action_comp:
+                act_value = sorted_actions[action_idx][1]
+            else:
+                action_idx += 1
+
+        return same_act,act_value
 
 
     def weighted_action_selection(self, action_probs):

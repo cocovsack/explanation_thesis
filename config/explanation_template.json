@@ -10,5 +10,8 @@
 	},
 	"alternative": {
 		"beginning": "Given the constraints, we could also use "
+	},
+	"goal": {
+		"beginning": "I am trying to make "
 	}
 }

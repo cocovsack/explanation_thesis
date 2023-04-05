@@ -27,6 +27,8 @@ from overlay import Overlay, OverlayList, PrologOverlay, PrologOverlayList, Over
 from sim_eval import InteractionGenerator, undo_incorrect_pastry_action, same_action_diff_intervention_type
 from state_transformer import add_shelf_classifaction
 
+import pdb
+
 SEED = 1000
 N_MEALS = 1
 SPLIT = 0
@@ -546,7 +548,21 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     # get the test meal
     # TKTK, use ingredients first... the way gt_htn is constructed? should i allow for more user input
     training_htns, testing_htns = learning_util.generate_train_test_meals(rng, N_MEALS, SPLIT)
-    gt_htn = CookingHTNFactory(testing_htns[0]["main"], testing_htns[0]["side"], testing_htns[0]["liquid"], testing_htns[0]["action_types"], testing_htns[0]["order"])._generate_meal("use immediately")
+    gt_htn = CookingHTNFactory(testing_htns[0]["main"], testing_htns[0]["side"], testing_htns[0]["liquid"], testing_htns[0]["action_types"], "main first")._generate_meal("ingredients first")
+    #pdb.set_trace()
+    
+    ### debugging
+    '''debug_path = "src/chefbot_utils/debugging"
+    if not os.path.exists(debug_path):
+        os.makedirs(debug_path)
+
+    debug_file = os.path.join(debug_path,
+                             "htn.json")
+    print("Saving {}...".format(debug_file))
+    with open(debug_file, 'w') as outfile:
+        htn_str = json.dumps(gt_htn)
+        json.dumps(htn_str, outfile)
+    '''
 
     model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "../../model_files/")
@@ -598,9 +614,11 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
         done, failed = False, False
         reward, step, n_corrections, goal_dist = 0, 0, 0, 0
         loss_ep = 0
+        overlay_info = []
 
         for i in range(0, len(user_overlay)):
             overlay = PrologOverlay("testing_meal", user_overlay[i]["rules"][0], user_overlay[i]["overlay_type"])
+            overlay_info.append((overlay,user_overlay[i]))
 
             # agent.overlays = PrologOverlayList([overlay])
             if agent.overlays is None:
@@ -754,7 +772,22 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
                     
                     #do something about explanation
                     print("Generating explanations:")
-                    generate_explanations(user_overlay, relevant_values, int_reward_dict["actual_actions"])
+                    exp_data = {"overlays":user_overlay,"relevant_values":relevant_values,"actions":int_reward_dict["actual_actions"]}
+                    
+                    #get info for most important overlay
+                    all_overlays = agent.overlays
+                    overlay_values = []
+                    for indiv_overlay in agent.overlays:
+                        agent.overlays = PrologOverlayList([indiv_overlay])
+                        
+                        same_act, act_value = agent.compare_act(state, pred_action, possible_actions, ret_original_pred=True)
+                        overlay_values.append((indiv_overlay,same_act,act_value))
+                    
+                    agent.overlays = all_overlays
+                    exp_data["overlay_values"] = overlay_values 
+                    exp_data["overlay_info"] = overlay_info                       
+                    generate_explanations(exp_data)
+                    
                     input("press enter to continue")
 
 
@@ -788,7 +821,10 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
     return int_reward_dict["actual_actions"], user_overlay
     
 
-def generate_explanations (overlays, relevant_values, actions):
+def generate_explanations(data):
+    overlays = data["overlays"]
+    relevant_values = data["relevant_values"]
+    actions = data["actions"]
     explanations = {}
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                             "../../config/")
@@ -865,14 +901,12 @@ def generate_explanations (overlays, relevant_values, actions):
         else:
             fact_exp += "and" + permissive_ingredients[i]
 
-    # import 
-    # pdb.set_trace()
+    #pdb.set_trace()
     for i in range(0, len(prohibitive_adjectives)): 
         if i == 0:
             fact_exp += " that is not " + prohibitive_adjectives[i]
         else:
             fact_exp += "or" + prohibitive_adjectives[i]            
-    # pdb.set_trace
     print("Statement of fact explanation: " + fact_exp)
 
 
@@ -955,15 +989,91 @@ def generate_explanations (overlays, relevant_values, actions):
     ''' 
     Construct "most important overlay" explanation
     '''
+    overlay_values = data["overlay_values"]
+    overlay_info = data["overlay_info"]
+    most_imp_overlay = None
+    most_imp_change = False
+    most_imp_change_val = -np.inf
+    for indiv_ov in overlay_values:
+        this_ov, same_act, act_val = indiv_ov
+        if not(same_act):
+            if not(most_imp_change):
+                most_imp_overlay = this_ov
+                most_imp_change = True
+                most_imp_change_val = abs(relevant_values[0]-act_val)
+        elif abs(relevant_values[0]-act_val) > most_imp_change_val:
+            most_imp_overlay = this_ov
+            most_imp_change = True
+            most_imp_change_val = abs(relevant_values[0]-act_val)
+    for a,b in overlay_info:
+        if a == most_imp_overlay:
+            most_imp_overlay_format = b
+    import pdb
+    #pdb.set_trace()
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses([most_imp_overlay_format])
+    
+    phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
+                   "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+    phrase_info["json_key"]="all"
+    exp = create_phrase(phrase_info)
+    
+    print("Most important overlay explanation:", exp)
+    explanations["most_important"] = exp
 
     '''
     Construct "all overlays" explanation
-    '''
-    template_all = exp_json['all']
-    all_exp = template_all["beginning"]
+    '''    
 
     permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
-    print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
+    #print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
+    phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
+                   "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+    phrase_info["json_key"]="all"
+    all_exp = create_phrase(phrase_info)
+    print("All overlays explanation:", all_exp)
+    explanations["all"] = all_exp
+
+    '''
+    Construct "goal requirement" explanation
+    '''
+    
+
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    #print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
+    phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
+                   "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+    phrase_info["json_key"]="goal"
+    goal_exp = create_phrase(phrase_info)
+    print("Goal explanation:", goal_exp)
+    explanations["goal"] = goal_exp
+
+    '''
+    Construct "mathematical justification" explanation
+    '''
+
+    template_math = exp_json['math']
+    math_exp = template_math["beginning"] + str(relevant_values[0]) + " which is " + str(relevant_values[1]) + " higher than the next best action."
+    print("Mathematical explation: ", math_exp)
+  
+    return True
+
+def create_phrase(info):
+    permissive_adjectives = info["permissive_adjectives"]
+    permissive_dishes = info["permissive_dishes"]
+    prohibitive_adjectives = info["prohibitive_adjectives"]
+    prohibitive_dishes = info["prohibitive_dishes"]
+    permissive_ingredients = info["permissive_ingredients"]
+    prohibitive_ingredients = info["prohibitive_ingredients"]
+    json_key = info["json_key"]
+    
+    config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../../config/")
+    exp_json = json.load(open(os.path.join(config_dir, "explanation_template.json")))
+    template_all = exp_json[json_key]
+    all_exp = template_all["beginning"]
+
     
     something_permissive = False
     # only permissive adjectives
@@ -1069,23 +1179,7 @@ def generate_explanations (overlays, relevant_values, actions):
     #prohibitive adjectives and prohibitive dishes and prohibitive ingredient - not possible given current overlays
     
     all_exp += "."
-    print("All overlays explanation:", all_exp)
-    explanations["all"] = all_exp
-
-    '''
-    Construct "goal requirement" explanation
-    '''
-
-    '''
-    Construct "mathematical justification" explanation
-    '''
-
-    template_math = exp_json['math']
-    math_exp = template_math["beginning"] + str(relevant_values[0]) + " which is " + str(relevant_values[1]) + " higher than the next best action."
-    print("Mathematical explation: ", math_exp)
-  
-    return True
-
+    return all_exp
 
 def get_clauses(overlays):
     permissive_adjectives = []
@@ -1098,8 +1192,7 @@ def get_clauses(overlays):
         o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
-        # import pdb
-        # pdb.set_trace()
+        #pdb.set_trace()
         if overlay["extra_params"] not in overlay["params"]:
             overlay["params"].append(overlay["extra_params"])
         if o_type == "permit" or o_type == "transfer":
