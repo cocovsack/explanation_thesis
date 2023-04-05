@@ -865,14 +865,14 @@ def generate_explanations (overlays, relevant_values, actions):
         else:
             fact_exp += "and" + permissive_ingredients[i]
 
-    import pdb
-    pdb.set_trace()
+    # import 
+    # pdb.set_trace()
     for i in range(0, len(prohibitive_adjectives)): 
         if i == 0:
             fact_exp += " that is not " + prohibitive_adjectives[i]
         else:
             fact_exp += "or" + prohibitive_adjectives[i]            
-    pdb.set_trace
+    # pdb.set_trace
     print("Statement of fact explanation: " + fact_exp)
 
 
@@ -1098,8 +1098,8 @@ def get_clauses(overlays):
         o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
         if overlay["extra_params"] not in overlay["params"]:
             overlay["params"].append(overlay["extra_params"])
         if o_type == "permit" or o_type == "transfer":
