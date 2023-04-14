@@ -3,7 +3,7 @@
 		"beginning": "You told me to make "
 	},
 	"math": {
-		"beginning": "This action has a q-value of "
+		"beginning": "The reward associated with "
 	}, 
 	"none": {
 		"beginning": "I am "
