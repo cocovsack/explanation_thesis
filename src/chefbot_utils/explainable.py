@@ -220,7 +220,7 @@ class ProcessCommand(object):
             processed_command = pattern.sub('', command)   # TKTK WhAT DOES COMPILE/SUB DO?
             res_dict = self._rule_from_command(processed_command)
             res_dict["transcript"] = command
-
+            # print("RES DICT", res_dict)
             return res_dict
 
     def _get_action_space(self, constraints, template_key, type):
@@ -437,7 +437,15 @@ class ProcessCommand(object):
         act_res_dict = {"key": best_act_key, "action_param_dict":act_var, "score":act_score,
                             "type":"action"}
         # return the result dictionary with the highest score.
-        return max([ov_res_dict, act_res_dict], key=lambda res: res["score"])
+
+
+        max_overlay = max([ov_res_dict, act_res_dict], key=lambda res: res["score"])
+        if max_overlay["score"] < 85 and "i want to use" in command.lower():
+            max_overlay["availability_flag"] = True
+            max_overlay["availability_word"] = command[14:]
+        else:
+            max_overlay["availability_flag"] = False
+        return max_overlay
 
 
     def _score_template(self, command, name, template, template_type="overlay"):
@@ -785,7 +793,9 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
                     
                     agent.overlays = all_overlays
                     exp_data["overlay_values"] = overlay_values 
-                    exp_data["overlay_info"] = overlay_info                       
+                    exp_data["overlay_info"] = overlay_info
+                    # import pdb
+                    # pdb.set_trace()                      
                     generate_explanations(exp_data)
                     
                     input("press enter to continue")
@@ -823,6 +833,7 @@ def model_run(overlay_input, rng, model_args=None, agent_name="overlay",
 
 def generate_explanations(data):
     overlays = data["overlays"]
+    print("OVERLAYS:", overlays)
     relevant_values = data["relevant_values"]
     actions = data["actions"]
     explanations = {}
@@ -875,9 +886,9 @@ def generate_explanations(data):
         if noun in overlay['overlay_action_space']:
             relevant_overlays.append(overlay)
     
-    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(relevant_overlays)
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients, unavailable_ingredients = get_clauses(relevant_overlays)
 
-    fact_exp += noun.capitalize() + " is used to make "
+    fact_exp += noun.capitalize() + " is used to make"
 
     for i in range(0, len(permissive_adjectives)): 
         if i == 0:
@@ -896,10 +907,13 @@ def generate_explanations(data):
                 fact_exp += "and" + permissive_dishes[i]
     
     for i in range(0, len(permissive_ingredients)): 
-        if i == 0:
-            fact_exp += " with {}". format(permissive_ingredients[i])
+        if unavailable_ingredients != []:
+            fact_exp += " and it is available." 
         else:
-            fact_exp += "and" + permissive_ingredients[i]
+            if i == 0:
+                fact_exp += " with {}". format(permissive_ingredients[i])
+            else:
+                fact_exp += "and" + permissive_ingredients[i]
 
     #pdb.set_trace()
     for i in range(0, len(prohibitive_adjectives)): 
@@ -913,7 +927,7 @@ def generate_explanations(data):
     '''
     Construct "propose alternative" explanation
     '''
-    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients, unavailable_ingredients = get_clauses(overlays)
     template_alt = exp_json['alternative']
     alternative_exp = template_alt["beginning"]
 
@@ -950,31 +964,40 @@ def generate_explanations(data):
     for overlay in overlays:
         overlay_keys.append(list(overlay['overlay_action_space']))
 
-    # print("overlay keys", overlay_keys)
+    print("overlay keys", overlay_keys)
 
     intersection = overlay_keys[0]
     for keys in overlay_keys[1:]:
         intersection = [value for value in keys if value in intersection]
 
-    # print("intersection from overlays is", intersection)
-    # print("possible alternatives is ", possible_alternatives)
+    print("intersection from overlays is", intersection)
+    print("possible alternatives is ", possible_alternatives)
 
     intersection = [value for value in intersection if value in possible_alternatives]
 
-    # print("intersection is", intersection)
+    if unavailable_ingredients != []:
+        print("dealing with unavailable ingredients")
+        intersection = possible_alternatives
 
+    print("intersection is", intersection)
+    # import pdb
+    # pdb.set_trace()
     alternatives = []
     for item in intersection:
         ingredients = learning_util.INGREDIENT_DICT[item]
-        for adj in permissive_adjectives:
-            if adj in ingredients and item not in alternatives:
-                alternatives.append(item)
-        for dish in permissive_dishes:
-            if dish in ingredients and item not in alternatives:
-                alternatives.append(item)
-        for ing in permissive_ingredients:
-            if ing in ingredients and item not in alternatives:
-                alternatives.append(item)
+        if unavailable_ingredients != []: #assume we're getting a fruit topping for oatmeal as our unavailable ingredient
+            alternatives = ['banana', 'blueberry', 'strawberry']
+        else:
+            for adj in permissive_adjectives:
+                if adj in ingredients and item not in alternatives:
+                    alternatives.append(item)
+            for dish in permissive_dishes:
+                if dish in ingredients and item not in alternatives:
+                    alternatives.append(item)
+            for ing in permissive_ingredients:
+                if ing in ingredients and item not in alternatives:
+                    alternatives.append(item)
+            
 
     if len(alternatives) == 0:
         alternative_exp = "There are no alternatives available."
@@ -1008,13 +1031,13 @@ def generate_explanations(data):
     for a,b in overlay_info:
         if a == most_imp_overlay:
             most_imp_overlay_format = b
-    import pdb
+    # import pdb
     #pdb.set_trace()
-    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses([most_imp_overlay_format])
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients, unavailable_ingredients = get_clauses([most_imp_overlay_format])
     
     phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
                    "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
-                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients, 'unavailable_ingredients':unavailable_ingredients}
     phrase_info["json_key"]="all"
     exp = create_phrase(phrase_info)
     
@@ -1025,11 +1048,11 @@ def generate_explanations(data):
     Construct "all overlays" explanation
     '''    
 
-    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients,unavailable_ingredients = get_clauses(overlays)
     #print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
     phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
                    "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
-                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients, 'unavailable_ingredients':unavailable_ingredients}
     phrase_info["json_key"]="all"
     all_exp = create_phrase(phrase_info)
     print("*********** All overlays explanation:", all_exp)
@@ -1040,11 +1063,11 @@ def generate_explanations(data):
     '''
     
 
-    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients = get_clauses(overlays)
+    permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients, unavailable_ingredients = get_clauses(overlays)
     #print(permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients)
     phrase_info = {"permissive_adjectives":permissive_adjectives, "permissive_dishes":permissive_dishes,
                    "prohibitive_adjectives":prohibitive_adjectives, "prohibitive_dishes":prohibitive_dishes, 
-                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients}
+                   "permissive_ingredients":permissive_ingredients, "prohibitive_ingredients":prohibitive_ingredients, 'unavailable_ingredients':unavailable_ingredients}
     phrase_info["json_key"]="goal"
     # print(phrase_info)
     goal_exp = create_phrase_permissive(phrase_info) 
@@ -1054,6 +1077,8 @@ def generate_explanations(data):
         goal_exp += " that you are allowed to eat."
     if 'chocolatechips' in permissive_ingredients and 'healthy' in permissive_adjectives:
         goal_exp += ". This is not possible because chocolate chips are not healthy."
+    if unavailable_ingredients != []:
+        goal_exp += ". This is not possible because " + unavailable_ingredients[0] +" is not available."
     #TODO: make this work:
     # if "doesn't exist" in prohibitive_adjectives:
     #     goal_exp += ". This is not possible because it is not available."
@@ -1079,6 +1104,7 @@ def create_phrase(info):
     prohibitive_dishes = info["prohibitive_dishes"]
     permissive_ingredients = info["permissive_ingredients"]
     prohibitive_ingredients = info["prohibitive_ingredients"]
+    unavailable_ingredients = info['unavailable_ingredients']
     json_key = info["json_key"]
     
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../../config/")
@@ -1089,27 +1115,34 @@ def create_phrase(info):
     
     something_permissive = False
     # only permissive adjectives
-    if permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients == []:
+    if permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something "
         for i in range(0, len(permissive_adjectives) - 1): 
             all_exp += permissive_adjectives[i] + " and "   
         all_exp += permissive_adjectives[-1]
     # only permissive dishes
-    if permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients == []:
+    if permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         for i in range(0, len(permissive_dishes) - 1): 
             all_exp += permissive_dishes[i] + " and "   
         all_exp += permissive_dishes[-1]
     # only permissive ingedients
-    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != []:
+    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something using "
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and "   
         all_exp += permissive_ingredients[-1]
+    # only permissive ingedients with unavailable ingredients
+    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        all_exp += "something using "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and "   
+        all_exp += unavailable_ingredients[-1]
     #permissive adjectives and permissive ingredients
-    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients == []:
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         if len(permissive_adjectives) > 2: 
             all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
@@ -1122,7 +1155,7 @@ def create_phrase(info):
             all_exp += permissive_dishes[i] + " and "   
         all_exp += permissive_dishes[-1]
     #permissive adjectives and permissive dishes
-    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != []:
+    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something "
         for i in range(0, len(permissive_adjectives) - 1): 
@@ -1131,8 +1164,18 @@ def create_phrase(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+    #permissive adjectives and permissive dishes and unavailable ingredients
+    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        all_exp += "something "
+        for i in range(0, len(permissive_adjectives) - 1): 
+            all_exp += permissive_adjectives[i] + " and "   
+        all_exp += permissive_adjectives[-1] + " that uses "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
     #permissive dishes and permissive ingredients
-    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != []:
+    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         for i in range(0, len(permissive_dishes) - 1): 
             all_exp += permissive_dishes[i] + " and "   
@@ -1140,8 +1183,17 @@ def create_phrase(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+    #permissive dishes and permissive ingredients
+    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + " that uses "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
     #permissive dishes, adjectives, and ingredients
-    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != []:
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         if len(permissive_adjectives) > 2: 
             all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
@@ -1155,6 +1207,21 @@ def create_phrase(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+     #permissive dishes, adjectives, and ingredients, and unavailable_ingredients   
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        if len(permissive_adjectives) > 2: 
+            all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
+        if len(permissive_adjectives) == 2:
+            all_exp = all_exp + permissive_adjectives[0]  + ' and ' + permissive_adjectives[1] + " "
+        if len(permissive_adjectives) == 1:
+            all_exp = all_exp + permissive_adjectives[0] + " "
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + ' that uses '
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
 
     #only prohibitive adjectives
     if prohibitive_adjectives != [] and prohibitive_dishes == [] and prohibitive_ingredients == []:
@@ -1203,6 +1270,7 @@ def create_phrase_permissive(info):
     prohibitive_dishes = info["prohibitive_dishes"]
     permissive_ingredients = info["permissive_ingredients"]
     prohibitive_ingredients = info["prohibitive_ingredients"]
+    unavailable_ingredients = info['unavailable_ingredients']
     json_key = info["json_key"]
     
     config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../../config/")
@@ -1213,27 +1281,34 @@ def create_phrase_permissive(info):
     
     something_permissive = False
     # only permissive adjectives
-    if permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients == []:
+    if permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something "
         for i in range(0, len(permissive_adjectives) - 1): 
             all_exp += permissive_adjectives[i] + " and "   
         all_exp += permissive_adjectives[-1]
     # only permissive dishes
-    if permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients == []:
+    if permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         for i in range(0, len(permissive_dishes) - 1): 
             all_exp += permissive_dishes[i] + " and "   
         all_exp += permissive_dishes[-1]
     # only permissive ingedients
-    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != []:
+    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something using "
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and "   
         all_exp += permissive_ingredients[-1]
+    # only permissive ingedients with unavailable ingredients
+    if permissive_adjectives == [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        all_exp += "something using "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and "   
+        all_exp += unavailable_ingredients[-1]
     #permissive adjectives and permissive ingredients
-    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients == []:
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients == [] and unavailable_ingredients == []:
         something_permissive = True
         if len(permissive_adjectives) > 2: 
             all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
@@ -1246,7 +1321,7 @@ def create_phrase_permissive(info):
             all_exp += permissive_dishes[i] + " and "   
         all_exp += permissive_dishes[-1]
     #permissive adjectives and permissive dishes
-    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != []:
+    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         all_exp += "something "
         for i in range(0, len(permissive_adjectives) - 1): 
@@ -1255,8 +1330,18 @@ def create_phrase_permissive(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+    #permissive adjectives and permissive dishes and unavailable ingredients
+    elif permissive_adjectives != [] and permissive_dishes == [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        all_exp += "something "
+        for i in range(0, len(permissive_adjectives) - 1): 
+            all_exp += permissive_adjectives[i] + " and "   
+        all_exp += permissive_adjectives[-1] + " that uses "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
     #permissive dishes and permissive ingredients
-    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != []:
+    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         for i in range(0, len(permissive_dishes) - 1): 
             all_exp += permissive_dishes[i] + " and "   
@@ -1264,8 +1349,17 @@ def create_phrase_permissive(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+    #permissive dishes and permissive ingredients
+    elif permissive_adjectives == [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + " that uses "
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
     #permissive dishes, adjectives, and ingredients
-    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != []:
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients == []:
         something_permissive = True
         if len(permissive_adjectives) > 2: 
             all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
@@ -1279,6 +1373,22 @@ def create_phrase_permissive(info):
         for i in range(0, len(permissive_ingredients) - 1): 
             all_exp += permissive_ingredients[i] + " and " 
         all_exp += permissive_ingredients[-1]
+     #permissive dishes, adjectives, and ingredients, and unavailable_ingredients   
+    elif permissive_adjectives != [] and permissive_dishes != [] and permissive_ingredients != [] and unavailable_ingredients != []:
+        something_permissive = True
+        if len(permissive_adjectives) > 2: 
+            all_exp = all_exp + permissive_adjectives[0] + ", " + permissive_adjectives[1] + ", and " + permissive_adjectives[2]
+        if len(permissive_adjectives) == 2:
+            all_exp = all_exp + permissive_adjectives[0]  + ' and ' + permissive_adjectives[1] + " "
+        if len(permissive_adjectives) == 1:
+            all_exp = all_exp + permissive_adjectives[0] + " "
+        for i in range(0, len(permissive_dishes) - 1): 
+            all_exp += permissive_dishes[i] + " and "   
+        all_exp += permissive_dishes[-1] + ' that uses '
+        for i in range(0, len(unavailable_ingredients) - 1): 
+            all_exp += unavailable_ingredients[i] + " and " 
+        all_exp += unavailable_ingredients[-1]
+
 
     return all_exp
 
@@ -1290,7 +1400,11 @@ def get_clauses(overlays):
     prohibitive_adjectives = []
     prohibitive_dishes = []
     prohibitive_ingredients = []
+    unavailable_ingredients = []
     for overlay in overlays:
+        if overlay['availability_flag']:
+            unavailable_ingredients.append(overlay['availability_word'])
+
         o_type = overlay["overlay_type"]
         if type(overlay["params"]) != list:
             overlay["params"] = [overlay["params"]]
@@ -1314,7 +1428,7 @@ def get_clauses(overlays):
                     prohibitive_dishes.append(param)
                 elif param in INGREDIENTS:
                     prohibitive_ingredients.append(param)
-    return permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients
+    return permissive_adjectives, permissive_dishes, prohibitive_adjectives, prohibitive_dishes, permissive_ingredients, prohibitive_ingredients, unavailable_ingredients
         
 
 #     explanations["none"]
